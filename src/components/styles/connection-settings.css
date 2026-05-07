@@ -1,0 +1,41 @@
+.tooltip-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 6px;
+    cursor: help;
+}
+
+.tooltip-icon {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #7f8c8d;
+    border-radius: 50%;
+    font-size: 10px;
+    color: #7f8c8d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tooltip-text {
+    visibility: hidden;
+    position: fixed;
+    z-index: 99999;
+    background: #34495e;
+    color: #fff;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    text-align: left;
+    width: 250px;
+    /* 位置通过 JS 动态控制 */
+}
+
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
+}

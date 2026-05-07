@@ -1,0 +1,10 @@
+.global-tooltip {
+    padding: 8px 12px;
+    background: #34495e;
+    color: white;
+    font-size: 12px;
+    border-radius: 4px;
+    pointer-events: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    max-width: 250px;
+}

@@ -1,0 +1,19 @@
+.connection-status-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+}
+
+.connection-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.connection-status-text {
+    font-size: 14px;
+    color: #666;
+}

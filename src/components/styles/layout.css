@@ -1,0 +1,140 @@
+.layout-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    font-family: sans-serif;
+}
+
+/* Header Styles */
+header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 10px 20px;
+    height: 50px;
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.brand {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.nav-menu {
+    list-style: none;
+    display: flex;
+    gap: 15px;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-menu a {
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+/* Main Wrapper */
+.layout-main-wrapper {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.layout-sidebar {
+    width: 240px;
+    background-color: #2c3e50;
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Nav & Link Styles */
+.layout-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.layout-nav-link {
+    color: white;
+    text-decoration: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.layout-nav-link-active {
+    background-color: #34495e;
+}
+
+.layout-nav-sub {
+    display: flex;
+    flex-direction: column;
+    padding-left: 20px;
+    margin-top: 5px;
+    gap: 2px;
+}
+
+.layout-nav-sub-item {
+    color: #bdc3c7;
+    text-decoration: none;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.layout-nav-sub-item:hover {
+    background-color: #3e5871;
+    color: white;
+}
+
+.layout-nav-sub-item.active {
+    background-color: #34495e;
+    color: white;
+    font-weight: bold;
+}
+
+.layout-content {
+    flex: 1;
+    overflow-y: auto;
+    background-color: #fff;
+    padding: 20px;
+}
+
+/* Footer Styles */
+footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    padding: 10px 20px;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.footer-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.footer-links ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 10px;
+}
+
+.footer-links a {
+    color: #6c757d;
+    text-decoration: none;
+}

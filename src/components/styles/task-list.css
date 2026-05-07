@@ -1,0 +1,141 @@
+.task-list-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.task-list-header {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+}
+
+.refresh-button {
+    padding: 6px 12px;
+    cursor: pointer;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.refresh-button:hover {
+    background-color: #f5f5f5;
+    border-color: #ccc;
+}
+
+.filter-bar {
+    display: flex;
+    padding: 8px 16px;
+    gap: 8px;
+    border-bottom: 1px solid #eee;
+    background-color: #fafafa;
+}
+
+.filter-tab {
+    padding: 4px 12px;
+    cursor: pointer;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.filter-tab.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.filter-tab.inactive {
+    background-color: white;
+    color: #666;
+}
+
+.task-items-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.empty-state {
+    padding: 40px;
+    text-align: center;
+    color: #999;
+}
+
+.task-item {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+}
+
+.task-item.selected {
+    background-color: #e3f2fd;
+}
+
+.task-item-top {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 12px;
+}
+
+.task-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.task-name.bold {
+    font-weight: bold;
+}
+
+.status-label {
+    font-size: 12px;
+    color: #666;
+    margin-left: 8px;
+}
+
+.task-item-bottom {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.progress-container {
+    flex: 1;
+    height: 4px;
+    background-color: #eee;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.progress-text, .speed-text {
+    font-size: 11px;
+    color: #999;
+    width: 60px;
+    text-align: right;
+}
+
+.progress-text {
+    width: 40px;
+}
