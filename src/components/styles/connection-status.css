@@ -2,9 +2,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #ddd;
+    padding: 0;
 }
 
 .connection-status-dot {

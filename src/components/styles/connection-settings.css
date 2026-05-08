@@ -1,21 +1,77 @@
+.connection-settings-container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.connection-settings-category {
+    margin-bottom: 30px;
+}
+
+.connection-settings-category-title {
+    font-size: 1.5rem;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+}
+
+.connection-settings-options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.connection-settings-option-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.connection-settings-option-item:hover {
+    background-color: #f9f9f9;
+}
+
+.label-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.connection-settings-option-label {
+    font-weight: 500;
+    color: #34495e;
+}
+
+.connection-settings-option-input {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 250px;
+}
+
+/* Tooltip styles */
 .tooltip-container {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
-    margin-left: 6px;
+    width: 18px;
+    height: 18px;
+    margin-left: 8px;
     cursor: help;
+    background: #ecf0f1;
+    border-radius: 50%;
 }
 
 .tooltip-icon {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #7f8c8d;
-    border-radius: 50%;
-    font-size: 10px;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
     color: #7f8c8d;
+    font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -27,13 +83,13 @@
     z-index: 99999;
     background: #34495e;
     color: #fff;
-    padding: 8px;
+    padding: 10px 15px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 13px;
     pointer-events: none;
     text-align: left;
-    width: 250px;
-    /* 位置通过 JS 动态控制 */
+    width: 300px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .tooltip-container:hover .tooltip-text {
