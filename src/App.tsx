@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onMount, type Component } from "solid-js";
+import { createSignal, onMount, type Component } from "solid-js";
 import Layout from "./components/Layout";
 import ConnectionSettings from "./components/ConnectionSettings";
 import AppSettingsView from "./components/AppSettingsView";
@@ -12,7 +12,7 @@ import { aria2GlobalAvailableOptions } from "./config/aria2-available-options";
 
 const App: Component = () => {
   const [view, setView] = createSignal<
-    "downloads" | "settings" | "status" | "app-settings"
+    "downloads" | "settings" | "status" | "app-settings" | "rpc-profiles"
   >("downloads");
   const [activeSubTab, setActiveSubTab] = createSignal<string | null>(
     Object.keys(aria2GlobalAvailableOptions)[0],
@@ -37,7 +37,7 @@ const App: Component = () => {
           setActiveSubTab={setActiveSubTab}
         />
       ) : view() === "rpc-profiles" ? (
-        <RpcProfileView onProfileSelected={(id) => setView("downloads")} />
+        <RpcProfileView onProfileSelected={() => setView("downloads")} />
       ) : view() === "app-settings" ? (
         <AppSettingsView />
       ) : view() === "status" ? (

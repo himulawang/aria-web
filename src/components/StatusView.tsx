@@ -1,11 +1,4 @@
-import {
-  createSignal,
-  onMount,
-  type Component,
-  createResource,
-  Show,
-  For,
-} from "solid-js";
+import { type Component, createResource, Show, For } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import "./styles/status-view.css";

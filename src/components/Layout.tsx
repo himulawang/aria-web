@@ -1,5 +1,4 @@
 import { type Component, type JSX, createSignal, For } from "solid-js";
-import { aria2SettingsTabLabels } from "../config/aria2-settings-labels";
 import { t } from "../i18n";
 import Header from "./layout/Header";
 import Footer from "./layout/Footer";

@@ -1,4 +1,4 @@
-import { type Component, createSignal, For, Show } from "solid-js";
+import { type Component, createSignal } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import "./styles/app-settings.css";

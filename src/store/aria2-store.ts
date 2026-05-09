@@ -33,6 +33,7 @@ interface Aria2State {
   selectedTaskId: string | null;
   selectedTaskDetail: any | null;
   globalStat: GlobalStat | null;
+  isDownloading: boolean;
   appSettings: AppSettings;
 }
 
@@ -52,6 +53,7 @@ const [state, setState] = createStore<Aria2State>({
   selectedTaskId: null,
   selectedTaskDetail: null,
   globalStat: null,
+  isDownloading: false,
   appSettings: DEFAULT_APP_SETTINGS,
 });
 
@@ -500,10 +502,63 @@ export const aria2Store = {
     if (pollingTimer) return;
 
     pollingTimer = setInterval(async () => {
-      if (state.connectionStatus !== "connected") return;
+      if (state.connectionStatus !== "connected" || !client) return;
 
       try {
-        await Promise.all([this.fetchActiveTasks(), this.fetchGlobalStat()]);
+        const calls: { method: string; params: any[] }[] = [
+          { method: "aria2.tellActive", params: [] },
+        ];
+
+        // 只有在状态机处于 isDownloading 时才请求 GlobalStat
+        if (state.isDownloading) {
+          calls.push({ method: "aria2.getGlobalStat", params: [] });
+        }
+
+        const results = await client.multicall<any[]>(calls);
+
+        const rawActive = results[0];
+        const active =
+          Array.isArray(rawActive) && Array.isArray(rawActive[0])
+            ? rawActive[0]
+            : Array.isArray(rawActive)
+              ? rawActive
+              : [];
+
+        // 状态机转移：根据活跃任务数量更新 isDownloading
+        const hasActiveTasks = active.length > 0;
+        if (hasActiveTasks !== state.isDownloading) {
+          setState("isDownloading", hasActiveTasks);
+          logger.info(
+            `Download state changed to: ${hasActiveTasks ? "Active" : "Idle"}`,
+            LOG_CONTEXT,
+          );
+        }
+
+        if (Array.isArray(rawActive) === false && rawActive) {
+          logger.error(
+            `Multicall: aria2.tellActive failed: ${JSON.stringify(rawActive)}`,
+            LOG_CONTEXT,
+          );
+        }
+        setState("tasks", (prev) => {
+          const activeGids = new Set(active.map((t: any) => t.gid));
+          return [
+            ...active,
+            ...prev.filter((t: any) => !activeGids.has(t.gid)),
+          ];
+        });
+
+        // 只有在 Active 模式且有结果时更新 globalStat
+        if (state.isDownloading && results[1]) {
+          const rawStat = results[1];
+          const stat =
+            Array.isArray(rawStat) &&
+            typeof rawStat[0] === "object" &&
+            rawStat[0] !== null
+              ? rawStat[0]
+              : rawStat;
+          setState("globalStat", stat);
+        }
       } catch (e) {
         logger.warn(`Polling error: ${e}`, LOG_CONTEXT);
       }
@@ -523,8 +578,15 @@ export const aria2Store = {
     client.on("aria2.onDownloadStart", (params: any[]) => {
       const gid = params[0].gid;
       logger.debug(`Task started: ${gid}`, LOG_CONTEXT);
+      setState("isDownloading", true);
       this.fetchTaskDetail(gid).catch((err) =>
         logger.error(`Error in onDownloadStart: ${err}`, LOG_CONTEXT),
+      );
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(
+          `Error fetching global stat on start: ${err}`,
+          LOG_CONTEXT,
+        ),
       );
     });
 
@@ -532,6 +594,14 @@ export const aria2Store = {
       const gid = params[0].gid;
       logger.debug(`Task paused: ${gid}`, LOG_CONTEXT);
       setState("tasks", (t) => t.gid === gid, { status: "paused" });
+      // 注意：这里不直接设为 false，因为可能还有其他任务在下载
+      // 状态转移由下一次 tellActive 轮询最终决定
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(
+          `Error fetching global stat on pause: ${err}`,
+          LOG_CONTEXT,
+        ),
+      );
     });
 
     client.on("aria2.onDownloadStop", (params: any[]) => {
@@ -539,6 +609,9 @@ export const aria2Store = {
       logger.debug(`Task stopped: ${gid}`, LOG_CONTEXT);
       setState("tasks", (prev) => prev.filter((t) => t.gid !== gid));
       notificationStore.add(`Task stopped: ${gid}`, "info");
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(`Error fetching global stat on stop: ${err}`, LOG_CONTEXT),
+      );
     });
 
     client.on("aria2.onDownloadComplete", (params: any[]) => {
@@ -548,6 +621,12 @@ export const aria2Store = {
         logger.error(`Error in onDownloadComplete: ${err}`, LOG_CONTEXT),
       );
       notificationStore.add(`Download completed: ${gid}`, "success");
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(
+          `Error fetching global stat on complete: ${err}`,
+          LOG_CONTEXT,
+        ),
+      );
     });
 
     client.on("aria2.onDownloadError", (params: any[]) => {
@@ -555,6 +634,12 @@ export const aria2Store = {
       logger.debug(`Task error: ${gid}`, LOG_CONTEXT);
       setState("tasks", (t) => t.gid === gid, { status: "error" });
       notificationStore.add(`Download error: ${gid}`, "error");
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(
+          `Error fetching global stat on error: ${err}`,
+          LOG_CONTEXT,
+        ),
+      );
     });
   },
 };
