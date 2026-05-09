@@ -2,7 +2,6 @@ import { type Component, Show, createSignal } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import { formatSize, formatSpeed } from "../utils/format";
-import "./styles/task-detail.css";
 
 const TaskDetail: Component = () => {
   const state = aria2Store.getState();
@@ -34,126 +33,148 @@ const TaskDetail: Component = () => {
   return (
     <Show
       when={state.selectedTaskDetail}
-      fallback={<div class="task-detail-empty">{t("task-detail.empty")()}</div>}
+      fallback={
+        <div class="text-center py-10 opacity-50">
+          {t("task-detail.empty")()}
+        </div>
+      }
     >
-      <div class="task-detail-container">
-        <div class="task-detail-header">
-          <h2 class="task-detail-header-title">{t("task-detail.title")()}</h2>
-          <span
-            class="task-detail-status-badge"
-            style={{
-              "background-color":
-                state.selectedTaskDetail?.status === "active"
-                  ? "#e3f2fd"
-                  : "#eee",
-              color:
-                state.selectedTaskDetail?.status === "active"
-                  ? "#2196f3"
-                  : "#666",
-            }}
+      <div class="space-y-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold">{t("task-detail.title")()}</h2>
+          <div
+            class={`badge ${
+              state.selectedTaskDetail?.status === "active"
+                ? "badge-primary"
+                : "badge-ghost"
+            }`}
           >
             {state.selectedTaskDetail?.status.toUpperCase()}
-          </span>
-        </div>
-
-        <div class="task-detail-grid">
-          <span class="task-detail-grid-label">{t("task-detail.gid")()}</span>
-          <span class="task-detail-grid-value-mono">
-            {state.selectedTaskDetail?.gid}
-          </span>
-
-          <span class="task-detail-grid-label">
-            {t("task-detail.progress")()}
-          </span>
-          <div class="task-detail-progress-wrapper">
-            <div class="task-detail-progress-bg">
-              <div
-                class="task-detail-progress-fill"
-                style={{
-                  width: `${Math.min(100, Math.round((state.selectedTaskDetail!.completedLength / (state.selectedTaskDetail!.totalLength || 1)) * 100))}%`,
-                  "background-color": "#2196f3",
-                }}
-              />
-            </div>
-            <span>
-              {Math.round(
-                (state.selectedTaskDetail!.completedLength /
-                  (state.selectedTaskDetail!.totalLength || 1)) *
-                  100,
-              )}
-              %
-            </span>
-          </div>
-
-          <span class="task-detail-grid-label">
-            {t("task-detail.totalSize")()}
-          </span>
-          <span>
-            {formatSize(Number(state.selectedTaskDetail!.totalLength))}
-          </span>
-
-          <span class="task-detail-grid-label">
-            {t("task-detail.downSpeed")()}
-          </span>
-          <span>
-            {formatSpeed(Number(state.selectedTaskDetail!.downloadSpeed))}
-          </span>
-
-          <span class="task-detail-grid-label">
-            {t("task-detail.upSpeed")()}
-          </span>
-          <span>
-            {formatSpeed(Number(state.selectedTaskDetail!.uploadSpeed))}
-          </span>
-        </div>
-
-        <div class="task-detail-speed-limits-card">
-          <h4 class="task-detail-speed-limits-title">
-            {t("task-detail.speedLimits")()}
-          </h4>
-          <div class="task-detail-speed-limits-row">
-            <div class="task-detail-speed-limit-group">
-              <label class="task-detail-speed-limit-label">
-                {t("task-detail.downLimit")()}
-              </label>
-              <input
-                type="number"
-                placeholder={t("task-detail.unlimited")()}
-                onBlur={(e) => handleSpeedChange("down", e.currentTarget.value)}
-                class="task-detail-speed-limit-input"
-              />
-            </div>
-            <div class="task-detail-speed-limit-group">
-              <label class="task-detail-speed-limit-label">
-                {t("task-detail.upLimit")()}
-              </label>
-              <input
-                type="number"
-                placeholder={t("task-detail.unlimited")()}
-                onBlur={(e) => handleSpeedChange("up", e.currentTarget.value)}
-                class="task-detail-speed-limit-input"
-              />
-            </div>
           </div>
         </div>
 
-        <div class="task-detail-files-container">
-          <h4 class="task-detail-files-title">{t("task-detail.files")()}</h4>
-          <div class="task-detail-files-list">
-            {state.selectedTaskDetail?.files?.map((file: any) => (
-              <div class="task-detail-file-item">
-                <span class="task-detail-file-name">
-                  {file.path.split("/").pop()}
-                </span>
-                <span class="task-detail-file-size">
-                  {formatSize(Number(file.length))}
-                </span>
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+          <div class="card-body p-0">
+            <table class="table w-full">
+              <tbody>
+                <tr>
+                  <th class="text-xs opacity-50 w-1/3">
+                    {t("task-detail.gid")()}
+                  </th>
+                  <td class="font-mono text-xs truncate">
+                    {state.selectedTaskDetail?.gid}
+                  </td>
+                </tr>
+                <tr>
+                  <th class="text-xs opacity-50">
+                    {t("task-detail.progress")()}
+                  </th>
+                  <td>
+                    <div class="flex items-center gap-3">
+                      <progress
+                        class="progress progress-primary w-full max-w-xs"
+                        value={state.selectedTaskDetail!.completedLength}
+                        max={state.selectedTaskDetail!.totalLength || 1}
+                      ></progress>
+                      <span class="text-xs w-8">
+                        {Math.round(
+                          (state.selectedTaskDetail!.completedLength /
+                            (state.selectedTaskDetail!.totalLength || 1)) *
+                            100,
+                        )}
+                        %
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th class="text-xs opacity-50">
+                    {t("task-detail.totalSize")()}
+                  </th>
+                  <td class="text-sm">
+                    {formatSize(Number(state.selectedTaskDetail!.totalLength))}
+                  </td>
+                </tr>
+                <tr>
+                  <th class="text-xs opacity-50">
+                    {t("task-detail.downSpeed")()}
+                  </th>
+                  <td class="text-sm">
+                    {formatSpeed(
+                      Number(state.selectedTaskDetail!.downloadSpeed),
+                    )}
+                  </td>
+                </tr>
+                <tr>
+                  <th class="text-xs opacity-50">
+                    {t("task-detail.upSpeed")()}
+                  </th>
+                  <td class="text-sm">
+                    {formatSpeed(Number(state.selectedTaskDetail!.uploadSpeed))}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+          <div class="card-body">
+            <h4 class="text-sm font-bold mb-4">
+              {t("task-detail.speedLimits")()}
+            </h4>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text text-xs">
+                    {t("task-detail.downLimit")()} (KB/s)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  placeholder={t("task-detail.unlimited")()}
+                  onBlur={(e) =>
+                    handleSpeedChange("down", e.currentTarget.value)
+                  }
+                  class="input input-bordered input-sm w-full"
+                />
               </div>
-            ))}
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text text-xs">
+                    {t("task-detail.upLimit")()} (KB/s)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  placeholder={t("task-detail.unlimited")()}
+                  onBlur={(e) => handleSpeedChange("up", e.currentTarget.value)}
+                  class="input input-bordered input-sm w-full"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="task-detail-actions">
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+          <div class="card-body">
+            <h4 class="text-sm font-bold mb-4">{t("task-detail.files")()}</h4>
+            <div class="space-y-2">
+              {state.selectedTaskDetail?.files?.map((file: any) => (
+                <div class="flex justify-between items-center p-2 bg-base-200 rounded-lg text-xs">
+                  <span class="truncate mr-2" title={file.path}>
+                    {file.path.split("/").pop()}
+                  </span>
+                  <span class="opacity-60 whitespace-nowrap">
+                    {formatSize(Number(file.length))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-4">
           <button
             onClick={() =>
               handleAction(
@@ -163,13 +184,11 @@ const TaskDetail: Component = () => {
               )
             }
             disabled={isActionLoading()}
-            class="task-detail-btn-primary"
-            style={{
-              "background-color":
-                state.selectedTaskDetail?.status === "active"
-                  ? "#ff9800"
-                  : "#4caf50",
-            }}
+            class={`btn flex-1 ${
+              state.selectedTaskDetail?.status === "active"
+                ? "btn-warning"
+                : "btn-success"
+            }`}
           >
             {isActionLoading()
               ? t("common.processing")()
@@ -179,7 +198,7 @@ const TaskDetail: Component = () => {
           </button>
           <button
             onClick={() => aria2Store.removeTask(state.selectedTaskDetail!.gid)}
-            class="task-detail-btn-danger"
+            class="btn btn-error btn-outline"
           >
             {t("common.delete")()}
           </button>

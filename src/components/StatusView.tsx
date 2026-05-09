@@ -1,7 +1,6 @@
 import { type Component, createResource, Show, For } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
-import "./styles/status-view.css";
 
 const StatusView: Component = () => {
   const state = aria2Store.getState();
@@ -16,78 +15,82 @@ const StatusView: Component = () => {
   );
 
   return (
-    <div class="status-view-container">
-      <div class="status-view-content">
-        <h2 class="status-view-title">Aria2 Status</h2>
-        <div class="status-view-group">
-          <label class="status-view-label">{t("status.rpcAddress")()}</label>
-          <input
-            type="text"
-            value={
-              state.rpcProfiles.find((p) => p.id === state.currentProfileId)
-                ?.config.url || ""
-            }
-            disabled
-            class="status-view-input"
-          />
-        </div>
-        <div class="status-view-group">
-          <label class="status-view-label">Aria2 Status</label>
-          <div
-            class={`status-label ${
-              state.connectionStatus === "connected"
-                ? "label-success"
-                : "label-danger"
-            }`}
-          >
-            {state.connectionStatus}
+    <div class="max-w-4xl mx-auto space-y-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-2xl font-bold">Aria2 Status</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="stat bg-base-100 shadow-sm border border-base-300">
+          <div class="stat-title">{t("status.rpcAddress")()}</div>
+          <div class="stat-value text-sm truncate">
+            {state.rpcProfiles.find((p) => p.id === state.currentProfileId)
+              ?.config.url || "-"}
           </div>
         </div>
-        <div class="status-view-group">
-          <label class="status-view-label">Aria2 Version</label>
-          <Show
-            when={!serverInfo.loading}
-            fallback={<span class="status-view-value">Loading...</span>}
-          >
-            <span class="status-view-value">
-              {serverInfo()?.version || "-"}
-            </span>
-          </Show>
+
+        <div class="stat bg-base-100 shadow-sm border border-base-300">
+          <div class="stat-title">Aria2 Status</div>
+          <div class="stat-value text-sm">
+            <div
+              class={`badge ${
+                state.connectionStatus === "connected"
+                  ? "badge-success"
+                  : "badge-error"
+              }`}
+            >
+              {state.connectionStatus}
+            </div>
+          </div>
         </div>
-        <div class="status-view-group">
-          <label class="status-view-label">Enabled Features</label>
-          <Show
-            when={!serverInfo.loading}
-            fallback={<span class="status-view-value">Loading...</span>}
-          >
-            <div class="status-view-value">
+
+        <div class="stat bg-base-100 shadow-sm border border-base-300">
+          <div class="stat-title">Aria2 Version</div>
+          <div class="stat-value text-sm">
+            <Show
+              when={!serverInfo.loading}
+              fallback={<span class="animate-pulse">Loading...</span>}
+            >
+              {serverInfo()?.version || "-"}
+            </Show>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 shadow-sm border border-base-300">
+        <div class="card-body">
+          <h3 class="card-title text-lg mb-4">Enabled Features</h3>
+          <div class="flex flex-wrap gap-2">
+            <Show
+              when={!serverInfo.loading}
+              fallback={<span class="animate-pulse">Loading...</span>}
+            >
               <For each={serverInfo()?.enabledFeatures || []}>
                 {(feature) => (
-                  <div>
-                    <input type="checkbox" checked disabled /> {feature}
-                  </div>
+                  <div class="badge badge-ghost border-base-300">{feature}</div>
                 )}
               </For>
-            </div>
-          </Show>
+            </Show>
+          </div>
         </div>
-        <div class="status-view-buttons">
-          <button
-            onClick={() => aria2Store.saveSession()}
-            class="btn btn-success"
-          >
-            Save Session
-          </button>
-          <button
-            onClick={async () => {
-              await aria2Store.shutdown();
-              refetch();
-            }}
-            class="btn btn-secondary"
-          >
-            Shutdown Aria2
-          </button>
-        </div>
+      </div>
+
+      <div class="flex justify-end gap-4">
+        <button
+          onClick={() => aria2Store.saveSession()}
+          class="btn btn-success"
+        >
+          Save Session
+        </button>
+        <button
+          onClick={async () => {
+            await aria2Store.shutdown();
+            refetch();
+          }}
+          class="btn btn-error btn-outline"
+        >
+          Shutdown Aria2
+        </button>
       </div>
     </div>
   );

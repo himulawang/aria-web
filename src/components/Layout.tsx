@@ -1,9 +1,14 @@
 import { type Component, type JSX, createSignal, For } from "solid-js";
 import { t } from "../i18n";
-import Header from "./layout/Header";
-import Footer from "./layout/Footer";
 import Toast from "./Toast";
-import "./styles/layout.css";
+import ConnectionStatus from "./ConnectionStatus";
+import {
+  HiOutlineArrowDownTray,
+  HiOutlineCog6Tooth,
+  HiOutlineCommandLine,
+  HiOutlineIdentification,
+  HiOutlineChartBar,
+} from "solid-icons/hi";
 
 interface LayoutProps {
   children: JSX.Element;
@@ -18,78 +23,114 @@ const Layout: Component<LayoutProps> = (props) => {
   const [isSettingsExpanded, setIsSettingsExpanded] = createSignal(true);
 
   const navItems = [
-    { label: t("nav.downloads"), view: "downloads", position: "sidebar" },
-    { label: t("nav.rpcProfiles"), view: "rpc-profiles", position: "sidebar" },
-    { label: t("nav.appSettings"), view: "app-settings", position: "sidebar" },
-    { label: t("nav.settings"), view: "settings", position: "sidebar" },
-    { label: t("nav.status"), view: "status", position: "sidebar" },
+    {
+      label: t("nav.downloads"),
+      view: "downloads",
+      position: "sidebar",
+      icon: HiOutlineArrowDownTray,
+    },
+    {
+      label: t("nav.rpcProfiles"),
+      view: "rpc-profiles",
+      position: "sidebar",
+      icon: HiOutlineIdentification,
+    },
+    {
+      label: t("nav.appSettings"),
+      view: "app-settings",
+      position: "sidebar",
+      icon: HiOutlineCog6Tooth,
+    },
+    {
+      label: t("nav.settings"),
+      view: "settings",
+      position: "sidebar",
+      icon: HiOutlineCommandLine,
+    },
+    {
+      label: t("nav.status"),
+      view: "status",
+      position: "sidebar",
+      icon: HiOutlineChartBar,
+    },
   ];
 
   return (
-    <div class="layout-container">
-      <Toast />
-      <Header
-        navItems={navItems.filter((i) => i.position === "header")}
-        currentView={props.currentView}
-        setView={props.setView}
-      />
-      <div class="layout-main-wrapper">
-        <aside class="layout-sidebar">
-          <nav class="layout-nav">
+    <div class="drawer lg:drawer-open h-screen overflow-hidden bg-base-200">
+      <input id="my-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content flex flex-col h-full overflow-hidden">
+        <main class="flex-1 overflow-hidden relative">
+          <Toast />
+          <div class="h-full p-4">{props.children}</div>
+        </main>
+      </div>
+      <div class="drawer-side">
+        <label htmlFor="my-drawer" class="drawer-overlay"></label>
+        <aside class="menu p-4 w-80 h-full bg-base-100 text-base-content border-r border-base-300 flex flex-col">
+          <div class="px-4 py-2 text-xl font-bold mb-4">AriaWeb</div>
+          <nav class="flex-1">
             <For each={navItems.filter((i) => i.position === "sidebar")}>
               {(item) =>
                 item.view === "settings" ? (
-                  <div class="layout-nav-item">
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        props.setView("settings");
-                        setIsSettingsExpanded(!isSettingsExpanded());
-                      }}
-                      class={`layout-nav-link ${props.currentView === "settings" ? "layout-nav-link-active" : "layout-nav-link-inactive"}`}
-                    >
-                      {item.label()} {isSettingsExpanded() ? "▼" : "▶"}
-                    </a>
-                    {isSettingsExpanded() && (
-                      <div class="layout-nav-sub">
+                  <li>
+                    <details open={isSettingsExpanded()} class="group">
+                      <summary
+                        onClick={(e) => {
+                          e.preventDefault();
+                          props.setView("settings");
+                          setIsSettingsExpanded(!isSettingsExpanded());
+                        }}
+                        class={`cursor-pointer ${props.currentView === "settings" ? "active" : ""}`}
+                      >
+                        <item.icon class="w-5 h-5" />
+                        {item.label()}
+                      </summary>
+                      <ul>
                         <For each={props.settingsCategories}>
                           {(category) => (
-                            <a
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                props.setActiveSubTab(category);
-                                props.setView("settings");
-                              }}
-                              class={`layout-nav-sub-item ${props.activeSubTab === category ? "active" : ""}`}
-                            >
-                              {t(`nav.settings.${category}`)() || category}
-                            </a>
+                            <li>
+                              <a
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  props.setActiveSubTab(category);
+                                  props.setView("settings");
+                                }}
+                                class={
+                                  props.activeSubTab === category
+                                    ? "active"
+                                    : ""
+                                }
+                              >
+                                {t(`nav.settings.${category}`)() || category}
+                              </a>
+                            </li>
                           )}
                         </For>
-                      </div>
-                    )}
-                  </div>
+                      </ul>
+                    </details>
+                  </li>
                 ) : (
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      props.setView(item.view);
-                    }}
-                    class={`layout-nav-link ${props.currentView === item.view ? "layout-nav-link-active" : "layout-nav-link-inactive"}`}
-                  >
-                    {item.label()}
-                  </a>
+                  <li>
+                    <a
+                      onClick={(e) => {
+                        e.preventDefault();
+                        props.setView(item.view);
+                      }}
+                      class={props.currentView === item.view ? "active" : ""}
+                    >
+                      <item.icon class="w-5 h-5" />
+                      {item.label()}
+                    </a>
+                  </li>
                 )
               }
             </For>
           </nav>
+          <div class="mt-auto pt-4 border-t border-base-300">
+            <ConnectionStatus />
+          </div>
         </aside>
-        <main class="layout-content">{props.children}</main>
       </div>
-      <Footer />
     </div>
   );
 };

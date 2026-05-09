@@ -8,33 +8,30 @@ interface HeaderProps {
 
 const Header: Component<HeaderProps> = (props) => {
   return (
-    <header>
-      <div class="header-container">
-        <span class="brand">AriaWeb</span>
-        <nav>
-          <ul class="nav-menu">
-            <For each={props.navItems}>
-              {(item) => (
-                <li>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      props.setView(item.view);
-                    }}
-                    class={props.currentView === item.view ? "active" : ""}
-                  >
-                    {typeof item.label === "function"
-                      ? item.label()
-                      : item.label}
-                  </a>
-                </li>
-              )}
-            </For>
-          </ul>
-        </nav>
+    <div class="navbar bg-base-100 border-b border-base-300 px-4">
+      <div class="flex-1">
+        {/* Title removed as it is now in the sidebar */}
       </div>
-    </header>
+      <div class="flex-none">
+        <ul class="menu menu-horizontal px-1">
+          <For each={props.navItems}>
+            {(item) => (
+              <li>
+                <a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    props.setView(item.view);
+                  }}
+                  class={props.currentView === item.view ? "active" : ""}
+                >
+                  {typeof item.label === "function" ? item.label() : item.label}
+                </a>
+              </li>
+            )}
+          </For>
+        </ul>
+      </div>
+    </div>
   );
 };
 

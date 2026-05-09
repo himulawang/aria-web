@@ -1,4 +1,4 @@
-import { createSignal, onMount, type Component } from "solid-js";
+import { createSignal, onMount, createEffect, type Component } from "solid-js";
 import Layout from "./components/Layout";
 import ConnectionSettings from "./components/ConnectionSettings";
 import AppSettingsView from "./components/AppSettingsView";
@@ -23,6 +23,17 @@ const App: Component = () => {
     await aria2Store.fetchTasks();
   });
 
+  createEffect(() => {
+    const theme = aria2Store.getState().appSettings.theme;
+    let activeTheme = theme;
+    if (theme === "system") {
+      activeTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    }
+    document.documentElement.setAttribute("data-theme", activeTheme);
+  });
+
   return (
     <Layout
       currentView={view()}
@@ -43,25 +54,13 @@ const App: Component = () => {
       ) : view() === "status" ? (
         <StatusView />
       ) : (
-        <div
-          style={{
-            display: "flex",
-            "flex-direction": "column",
-            height: "100%",
-          }}
-        >
+        <div class="flex flex-col h-full">
           <AddTask />
-          <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-            <div style={{ flex: 1, "overflow-y": "auto" }}>
+          <div class="flex flex-1 overflow-hidden">
+            <div class="flex-1 overflow-y-auto">
               <TaskList />
             </div>
-            <div
-              style={{
-                width: "350px",
-                "border-left": "1px solid #ddd",
-                "overflow-y": "auto",
-              }}
-            >
+            <div class="w-80 border-l border-base-300 overflow-y-auto">
               <TaskDetail />
             </div>
           </div>

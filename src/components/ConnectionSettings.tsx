@@ -4,7 +4,6 @@ import { notificationStore } from "../store/notification-store";
 import { t } from "../i18n";
 import { aria2AllOptions } from "../config/aria2-options";
 import { aria2GlobalAvailableOptions } from "../config/aria2-available-options";
-import "./styles/connection-settings.css";
 
 interface ConnectionSettingsProps {
   activeSubTab: string | null;
@@ -14,7 +13,6 @@ interface ConnectionSettingsProps {
 const ConnectionSettings: Component<ConnectionSettingsProps> = (props) => {
   const state = aria2Store.getState();
   const [optionValues, setOptionValues] = createSignal<Record<string, any>>({});
-  const [mousePos, setMousePos] = createSignal({ x: 0, y: 0 });
 
   const updateOption = async (name: string, value: any) => {
     setOptionValues({ ...optionValues(), [name]: value });
@@ -40,102 +38,97 @@ const ConnectionSettings: Component<ConnectionSettingsProps> = (props) => {
     const value = () => optionValues()[p.optName];
 
     return (
-      <div class="connection-settings-option-item">
-        <div class="label-wrapper">
-          <label class="connection-settings-option-label">
-            {p.opt.name || p.optName}
-          </label>
+      <div class="flex items-center justify-between py-3 border-b border-base-300 last:border-none">
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium">{p.opt.name || p.optName}</label>
           <Show when={p.opt.description}>
             <div
-              class="tooltip-container"
-              onMouseMove={(e) =>
-                setMousePos({
-                  x: e.clientX + 15,
-                  y: e.clientY + 15,
-                })
+              class="tooltip tooltip-right"
+              data-tip={
+                Array.isArray(p.opt.description)
+                  ? p.opt.description.join(" ")
+                  : p.opt.description
               }
             >
-              <span class="tooltip-icon">?</span>
-              <span
-                class="tooltip-text"
-                style={{
-                  top: `${mousePos().y}px`,
-                  left: `${mousePos().x}px`,
-                }}
-              >
-                {Array.isArray(p.opt.description)
-                  ? p.opt.description.join(" ")
-                  : p.opt.description}
-              </span>
+              <span class="btn btn-ghost btn-xs btn-circle opacity-50">?</span>
             </div>
           </Show>
         </div>
-        {(() => {
-          switch (p.opt.type) {
-            case "boolean":
-              return (
-                <input
-                  type="checkbox"
-                  checked={String(value()) === "true"}
-                  onChange={(e) =>
-                    updateOption(p.optName, String(e.currentTarget.checked))
-                  }
-                />
-              );
-            case "integer":
-              return (
-                <input
-                  type="number"
-                  value={value()}
-                  onInput={(e) =>
-                    updateOption(p.optName, parseInt(e.currentTarget.value, 10))
-                  }
-                  class="connection-settings-option-input"
-                />
-              );
-            case "option":
-              return (
-                <select
-                  value={String(value() ?? "")}
-                  onChange={(e) =>
-                    updateOption(p.optName, e.currentTarget.value)
-                  }
-                  class="connection-settings-option-input"
-                >
-                  <For each={p.opt.options || []}>
-                    {(o) => <option value={o}>{o}</option>}
-                  </For>
-                </select>
-              );
-            default:
-              return (
-                <input
-                  type="text"
-                  value={String(value() ?? "")}
-                  onInput={(e) =>
-                    updateOption(p.optName, e.currentTarget.value)
-                  }
-                  class="connection-settings-option-input"
-                />
-              );
-          }
-        })()}
+        <div class="flex items-center">
+          {(() => {
+            switch (p.opt.type) {
+              case "boolean":
+                return (
+                  <input
+                    type="checkbox"
+                    class="toggle toggle-sm toggle-primary"
+                    checked={String(value()) === "true"}
+                    onChange={(e) =>
+                      updateOption(p.optName, String(e.currentTarget.checked))
+                    }
+                  />
+                );
+              case "integer":
+                return (
+                  <input
+                    type="number"
+                    class="input input-bordered input-sm w-24"
+                    value={value()}
+                    onInput={(e) =>
+                      updateOption(
+                        p.optName,
+                        parseInt(e.currentTarget.value, 10),
+                      )
+                    }
+                  />
+                );
+              case "option":
+                return (
+                  <select
+                    class="select select-bordered select-sm w-32"
+                    value={String(value() ?? "")}
+                    onChange={(e) =>
+                      updateOption(p.optName, e.currentTarget.value)
+                    }
+                  >
+                    <For each={p.opt.options || []}>
+                      {(o) => <option value={o}>{o}</option>}
+                    </For>
+                  </select>
+                );
+              default:
+                return (
+                  <input
+                    type="text"
+                    class="input input-bordered input-sm w-32"
+                    value={String(value() ?? "")}
+                    onInput={(e) =>
+                      updateOption(p.optName, e.currentTarget.value)
+                    }
+                  />
+                );
+            }
+          })()}
+        </div>
       </div>
     );
   };
 
   return (
-    <div class="connection-settings-container">
-      <div class="connection-settings-options-container">
-        <div class="options-layout">
-          <div class="options-main">
-            <div class="connection-settings-category">
-              <h3 class="connection-settings-category-title">
-                {t(`nav.settings.${props.activeSubTab || "basicOptions"}`)() ||
-                  props.activeSubTab ||
-                  "basicOptions"}
-              </h3>
-              <div class="connection-settings-options-list">
+    <div class="h-full flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between mb-6 shrink-0">
+        <h2 class="text-2xl font-bold">
+          {t(`nav.settings.${props.activeSubTab || "basicOptions"}`)() ||
+            props.activeSubTab ||
+            "basicOptions"}
+        </h2>
+      </div>
+
+      <div class="flex-1 overflow-y-auto pr-2">
+        <div class="max-w-4xl mx-auto">
+          <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body">
+              <div class="space-y-1">
                 <For
                   each={
                     aria2GlobalAvailableOptions[

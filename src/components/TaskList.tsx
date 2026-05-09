@@ -1,28 +1,27 @@
 import { For, createSignal, type Component } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
-import { formatSize, formatSpeed } from "../utils/format";
-import "./styles/task-list.css";
+import { formatSpeed } from "../utils/format";
 
 const TaskItem: Component<{ task: any }> = (props) => {
   const state = aria2Store.getState();
 
-  const getStatusInfo = (status: string) => {
+  const getStatusStyle = (status: string) => {
     switch (status) {
       case "active":
-        return { color: "#2196f3", label: t("task-status.downloading")() };
+        return "badge-primary";
       case "paused":
-        return { color: "#ff9800", label: t("task-status.paused")() };
+        return "badge-warning";
       case "complete":
-        return { color: "#4caf50", label: t("task-status.completed")() };
+        return "badge-success";
       case "error":
-        return { color: "#f44336", label: t("task-status.error")() };
+        return "badge-error";
       default:
-        return { color: "#9e9e9e", label: status };
+        return "badge-ghost";
     }
   };
 
-  const status = getStatusInfo(props.task.status);
+  const status = getStatusStyle(props.task.status);
   const progress =
     props.task.totalLength > 0
       ? Math.min(
@@ -34,44 +33,44 @@ const TaskItem: Component<{ task: any }> = (props) => {
       : 0;
 
   return (
-    <div
+    <tr
       onClick={() => {
         if (state.selectedTaskId !== props.task.gid) {
           aria2Store.setSelectedTask(props.task.gid);
         }
       }}
-      class={`task-item ${state.selectedTaskId === props.task.gid ? "selected" : ""}`}
+      class={`hover cursor-pointer ${
+        state.selectedTaskId === props.task.gid ? "bg-base-200" : ""
+      }`}
     >
-      <div class="task-item-top">
-        <div
-          class="status-indicator"
-          style={{ "background-color": status.color }}
-        />
-        <div
-          class={`task-name ${state.selectedTaskId === props.task.gid ? "bold" : ""}`}
-        >
-          {props.task.files[0]?.path?.split("/").pop() ||
-            t("task-status.unknown")()}
+      <td class="font-medium">
+        <div class="flex flex-col gap-1">
+          <span class="truncate max-w-xs block">
+            {props.task.files[0]?.path?.split("/").pop() ||
+              t("task-status.unknown")()}
+          </span>
+          <div class="flex items-center gap-2">
+            <span class={`badge badge-xs ${status}`}>
+              {t("task-status." + props.task.status)() || props.task.status}
+            </span>
+            <span class="text-xs opacity-50">
+              {formatSpeed(Number(props.task.downloadSpeed))}
+            </span>
+          </div>
         </div>
-        <div class="status-label">{status.label}</div>
-      </div>
-
-      <div class="task-item-bottom">
-        <div class="progress-container">
-          <div
-            class="progress-bar"
-            style={{
-              width: `${progress}%`,
-              "background-color": status.color,
-            }}
-          />
+      </td>
+      <td>
+        <div class="flex items-center gap-2">
+          <progress
+            class="progress progress-primary w-24"
+            value={progress}
+            max="100"
+          ></progress>
+          <span class="text-xs">{progress}%</span>
         </div>
-        <div class="progress-text">{progress}%</div>
-        <div class="speed-text">
-          {formatSpeed(Number(props.task.downloadSpeed))}
-        </div>
-      </div>
-    </div>
+      </td>
+      <td class="text-right opacity-70">{props.task.status}</td>
+    </tr>
   );
 };
 
@@ -96,15 +95,18 @@ const TaskList: Component = () => {
   };
 
   return (
-    <div class="task-list-container">
-      <div class="task-list-header">
-        <h3 style={{ margin: 0 }}>{t("task-list.title")()}</h3>
-        <button onClick={() => aria2Store.fetchTasks()} class="refresh-button">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xl font-bold">{t("task-list.title")()}</h3>
+        <button
+          onClick={() => aria2Store.fetchTasks()}
+          class="btn btn-sm btn-outline"
+        >
           {t("common.refresh")()}
         </button>
       </div>
 
-      <div class="filter-bar">
+      <div class="tabs tabs-boxed gap-1">
         {[
           { id: "all", label: t("task-list.filter.all") },
           { id: "active", label: t("task-list.filter.active") },
@@ -113,15 +115,28 @@ const TaskList: Component = () => {
         ].map((tab) => (
           <button
             onClick={() => setFilter(tab.id as any)}
-            class={`filter-tab ${filter() === tab.id ? "active" : "inactive"}`}
+            class={`tab ${filter() === tab.id ? "tab-active" : ""}`}
           >
             {tab.label()}
           </button>
         ))}
       </div>
 
-      <div class="task-items-container">
-        <For each={filteredTasks()}>{(task) => <TaskItem task={task} />}</For>
+      <div class="overflow-x-auto bg-base-100 rounded-box border border-base-300">
+        <table class="table table-zebra w-full">
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Progress</th>
+              <th class="text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <For each={filteredTasks()}>
+              {(task) => <TaskItem task={task} />}
+            </For>
+          </tbody>
+        </table>
       </div>
     </div>
   );
