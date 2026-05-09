@@ -1,9 +1,12 @@
+import { logger } from "./logger";
 import type {
   Aria2Config,
   RpcRequest,
   RpcResponse,
   RpcNotification,
 } from "./types";
+
+const LOG_CONTEXT = "WebSocketRpcClient";
 
 export class WebSocketRpcClient {
   private config: Aria2Config;
@@ -56,20 +59,20 @@ export class WebSocketRpcClient {
 
     this.isConnecting = true;
     const wsUrl = this.getWsUrl();
-    console.log(`[WebSocketRpcClient] Connecting to ${wsUrl}...`);
+    logger.info(`Connecting to ${wsUrl}...`, LOG_CONTEXT);
 
     return new Promise((resolve, reject) => {
       try {
         this.socket = new WebSocket(wsUrl);
 
         this.socket.onopen = () => {
-          console.log("[WebSocketRpcClient] Connected successfully");
+          logger.info("Connected successfully", LOG_CONTEXT);
           this.isConnecting = false;
           resolve();
         };
 
         this.socket.onerror = (err) => {
-          console.error("[WebSocketRpcClient] WebSocket error:", err);
+          logger.error(`WebSocket error: ${err}`, LOG_CONTEXT);
           this.isConnecting = false;
           reject(err);
         };
@@ -77,9 +80,7 @@ export class WebSocketRpcClient {
         this.socket.onmessage = (msg) => this.handleMessage(msg.data);
 
         this.socket.onclose = (event) => {
-          console.warn(
-            `[WebSocketRpcClient] Closed: ${event.code} ${event.reason}`,
-          );
+          logger.warn(`Closed: ${event.code} ${event.reason}`, LOG_CONTEXT);
           this.isConnecting = false;
           this.handleClose();
         };
@@ -93,15 +94,15 @@ export class WebSocketRpcClient {
   private handleMessage(data: string) {
     try {
       const response: RpcResponse | RpcNotification = JSON.parse(data);
-      console.log("[WebSocketRpcClient] Received:", response);
+      logger.debug(`Received: ${JSON.stringify(response)}`, LOG_CONTEXT);
 
       if ("id" in response) {
         const pending = this.pendingRequests.get(response.id);
         if (pending) {
           if (response.error) {
-            console.error(
-              `[WebSocketRpcClient] Request ${response.id} failed:`,
-              response.error,
+            logger.error(
+              `Request ${response.id} failed: ${JSON.stringify(response.error)}`,
+              LOG_CONTEXT,
             );
             pending.reject(new Error(response.error.message));
           } else {
@@ -116,7 +117,10 @@ export class WebSocketRpcClient {
         }
       }
     } catch (e) {
-      console.error("[WebSocketRpcClient] Failed to parse message:", data, e);
+      logger.error(
+        `Failed to parse message: ${data}, error: ${e}`,
+        LOG_CONTEXT,
+      );
     }
   }
 
@@ -128,15 +132,16 @@ export class WebSocketRpcClient {
 
     if (this.reconnectTimer) return;
 
-    console.log(
-      `[WebSocketRpcClient] Scheduling reconnect in ${this.config.wsReconnectInterval}ms...`,
+    logger.info(
+      `Scheduling reconnect in ${this.config.wsReconnectInterval}ms...`,
+      LOG_CONTEXT,
     );
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
       try {
         await this.connect();
       } catch (e) {
-        console.error("[WebSocketRpcClient] Reconnect failed");
+        logger.error("Reconnect failed", LOG_CONTEXT);
       }
     }, this.config.wsReconnectInterval);
   }
@@ -151,10 +156,7 @@ export class WebSocketRpcClient {
 
     const noisyMethods = ["aria2.tellActive", "aria2.getGlobalStat"];
     if (!noisyMethods.includes(method)) {
-      console.log(
-        `[WebSocketRpcClient] Sending Request [${id}] ${method}`,
-        params,
-      );
+      logger.debug(`Sending Request [${id}] ${method}`, LOG_CONTEXT);
     }
 
     return new Promise((resolve, reject) => {

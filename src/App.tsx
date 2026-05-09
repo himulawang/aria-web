@@ -35,38 +35,33 @@ const App: Component = () => {
   });
 
   return (
-    <Layout
-      currentView={view()}
-      setView={(v) => setView(v as any)}
-      activeSubTab={activeSubTab()}
-      setActiveSubTab={setActiveSubTab}
-      settingsCategories={Object.keys(aria2GlobalAvailableOptions)}
-    >
-      {view() === "settings" ? (
-        <ConnectionSettings
-          activeSubTab={activeSubTab()}
-          setActiveSubTab={setActiveSubTab}
-        />
-      ) : view() === "rpc-profiles" ? (
-        <RpcProfileView onProfileSelected={() => setView("downloads")} />
-      ) : view() === "app-settings" ? (
-        <AppSettingsView />
-      ) : view() === "status" ? (
-        <StatusView />
-      ) : (
-        <div class="flex flex-col h-full">
-          <AddTask />
-          <div class="flex flex-1 overflow-hidden">
-            <div class="flex-1 overflow-y-auto">
-              <TaskList />
-            </div>
-            <div class="w-80 border-l border-base-300 overflow-y-auto">
-              <TaskDetail />
-            </div>
+    <>
+      <TaskDetail />
+      <Layout
+        currentView={view()}
+        setView={(v) => setView(v as any)}
+        activeSubTab={activeSubTab()}
+        setActiveSubTab={setActiveSubTab}
+        settingsCategories={Object.keys(aria2GlobalAvailableOptions)}
+      >
+        {view() === "settings" ? (
+          <ConnectionSettings
+            activeSubTab={activeSubTab()}
+            setActiveSubTab={setActiveSubTab}
+          />
+        ) : view() === "rpc-profiles" ? (
+          <RpcProfileView onProfileSelected={() => setView("downloads")} />
+        ) : view() === "app-settings" ? (
+          <AppSettingsView />
+        ) : view() === "status" ? (
+          <StatusView />
+        ) : (
+          <div class="h-full overflow-y-auto">
+            <TaskList />
           </div>
-        </div>
-      )}
-    </Layout>
+        )}
+      </Layout>
+    </>
   );
 };
 

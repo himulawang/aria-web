@@ -45,189 +45,211 @@ const TaskDetail: Component = () => {
     }
   };
 
-  return (
-    <Show
-      when={state.selectedTaskDetail}
-      fallback={
-        <div class="text-center py-10 opacity-50">
-          {t("task-detail.empty")()}
-        </div>
+  let detailRef: HTMLDivElement | undefined;
+
+  // Click outside to close
+  createEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (
+        detailRef &&
+        !detailRef.contains(e.target as Node) &&
+        state.selectedTaskDetail
+      ) {
+        aria2Store.setSelectedTask(null);
       }
-    >
-      <div class="space-y-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-xl font-bold">{t("task-detail.title")()}</h2>
-          <div
-            class={`badge ${
-              state.selectedTaskDetail?.status === "active"
-                ? "badge-primary"
-                : "badge-ghost"
-            }`}
-          >
-            {state.selectedTaskDetail?.status.toUpperCase()}
-          </div>
-        </div>
+    };
 
-        <div class="tabs tabs-boxed">
-          <button
-            class={`tab ${activeTab() === "overview" ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("overview")}
-          >
-            {t("task-detail.tabs.overview")()}
-          </button>
-          <button
-            class={`tab ${activeTab() === "peers" ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("peers")}
-          >
-            {t("task-detail.tabs.peers")()}
-          </button>
-          <button
-            class={`tab ${activeTab() === "files" ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("files")}
-          >
-            {t("task-detail.tabs.files")()}
-          </button>
-        </div>
+    if (state.selectedTaskDetail) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  });
 
-        <Show when={activeTab() === "overview"}>
-          <div class="card bg-base-100 shadow-sm border border-base-300">
-            <div class="card-body p-0">
-              <table class="table w-full">
-                <tbody>
-                  <tr>
-                    <th class="text-xs opacity-50 w-1/3">
-                      {t("task-detail.gid")()}
-                    </th>
-                    <td class="font-mono text-xs truncate">
-                      {state.selectedTaskDetail?.gid}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th class="text-xs opacity-50">
-                      {t("task-detail.progress")()}
-                    </th>
-                    <td>
-                      <div class="flex items-center gap-3">
-                        <progress
-                          class="progress progress-primary w-full max-w-xs"
-                          value={state.selectedTaskDetail!.completedLength}
-                          max={state.selectedTaskDetail!.totalLength || 1}
-                        ></progress>
-                        <span class="text-xs w-8">
-                          {Math.round(
-                            (state.selectedTaskDetail!.completedLength /
-                              (state.selectedTaskDetail!.totalLength || 1)) *
-                              100,
-                          )}
-                          %
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th class="text-xs opacity-50">
-                      {t("task-detail.totalSize")()}
-                    </th>
-                    <td class="text-sm">
-                      {formatSize(
-                        Number(state.selectedTaskDetail!.totalLength),
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+  return (
+    <Show when={state.selectedTaskDetail}>
+      <div
+        ref={detailRef}
+        class="fixed top-20 right-4 w-96 max-h-[calc(100vh-6rem)] overflow-y-auto card bg-base-100 shadow-xl border border-base-300 p-6 z-50"
+      >
+        <div class="space-y-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold">{t("task-detail.title")()}</h2>
+            <div
+              class={`badge ${
+                state.selectedTaskDetail?.status === "active"
+                  ? "badge-primary"
+                  : "badge-ghost"
+              }`}
+            >
+              {t(`task-status.${state.selectedTaskDetail?.status}`)()}
             </div>
           </div>
-        </Show>
 
-        <Show when={activeTab() === "peers"}>
-          <div class="card bg-base-100 shadow-sm border border-base-300">
-            <div class="card-body p-0">
-              <table class="table w-full">
-                <thead>
-                  <tr>
-                    <th class="text-xs">IP</th>
-                    <th class="text-xs">Port</th>
-                    <th class="text-xs">DL</th>
-                    <th class="text-xs">UL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <For each={peers()}>
-                    {(peer) => (
-                      <tr>
-                        <td class="text-xs font-mono">{peer.ip}</td>
-                        <td class="text-xs">{peer.port}</td>
-                        <td class="text-xs">
-                          {formatSpeed(Number(peer.downloadSpeed))}
-                        </td>
-                        <td class="text-xs">
-                          {formatSpeed(Number(peer.uploadSpeed))}
-                        </td>
-                      </tr>
-                    )}
-                  </For>
-                </tbody>
-              </table>
-              <Show when={peers().length === 0}>
-                <div class="p-4 text-center text-sm opacity-50">
-                  {t("task-detail.peers.empty")()}
-                </div>
-              </Show>
-            </div>
+          <div class="tabs tabs-boxed">
+            <button
+              class={`tab ${activeTab() === "overview" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("overview")}
+            >
+              {t("task-detail.tabs.overview")()}
+            </button>
+            <button
+              class={`tab ${activeTab() === "peers" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("peers")}
+            >
+              {t("task-detail.tabs.peers")()}
+            </button>
+            <button
+              class={`tab ${activeTab() === "files" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("files")}
+            >
+              {t("task-detail.tabs.files")()}
+            </button>
           </div>
-        </Show>
 
-        <Show when={activeTab() === "files"}>
-          <div class="card bg-base-100 shadow-sm border border-base-300">
-            <div class="card-body">
-              <h4 class="text-sm font-bold mb-4">{t("task-detail.files")()}</h4>
-              <div class="space-y-4">
-                {state.selectedTaskDetail?.files?.map((file: any) => (
-                  <div class="p-3 bg-base-200 rounded-lg text-xs space-y-2">
-                    <div class="font-bold">{file.path.split("/").pop()}</div>
-                    <div class="text-[10px] opacity-70">
-                      {file.uris?.map((u: any) => (
-                        <div>
-                          {u.uri} ({u.status})
+          <Show when={activeTab() === "overview"}>
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+              <div class="card-body p-0">
+                <table class="table w-full">
+                  <tbody>
+                    <tr>
+                      <th class="text-xs opacity-50 w-1/3">
+                        {t("task-detail.gid")()}
+                      </th>
+                      <td class="font-mono text-xs truncate">
+                        {state.selectedTaskDetail?.gid}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th class="text-xs opacity-50">
+                        {t("task-detail.progress")()}
+                      </th>
+                      <td>
+                        <div class="flex items-center gap-3">
+                          <progress
+                            class="progress progress-primary w-full max-w-xs"
+                            value={state.selectedTaskDetail!.completedLength}
+                            max={state.selectedTaskDetail!.totalLength || 1}
+                          ></progress>
+                          <span class="text-xs w-8">
+                            {Math.round(
+                              (state.selectedTaskDetail!.completedLength /
+                                (state.selectedTaskDetail!.totalLength || 1)) *
+                                100,
+                            )}
+                            %
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th class="text-xs opacity-50">
+                        {t("task-detail.totalSize")()}
+                      </th>
+                      <td class="text-sm">
+                        {formatSize(
+                          Number(state.selectedTaskDetail!.totalLength),
+                        )}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
-        </Show>
+          </Show>
 
-        <div class="flex gap-2 pt-4">
-          <button
-            onClick={() =>
-              handleAction(
+          <Show when={activeTab() === "peers"}>
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+              <div class="card-body p-0">
+                <table class="table w-full">
+                  <thead>
+                    <tr>
+                      <th class="text-xs">IP</th>
+                      <th class="text-xs">Port</th>
+                      <th class="text-xs">DL</th>
+                      <th class="text-xs">UL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For each={peers()}>
+                      {(peer) => (
+                        <tr>
+                          <td class="text-xs font-mono">{peer.ip}</td>
+                          <td class="text-xs">{peer.port}</td>
+                          <td class="text-xs">
+                            {formatSpeed(Number(peer.downloadSpeed))}
+                          </td>
+                          <td class="text-xs">
+                            {formatSpeed(Number(peer.uploadSpeed))}
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+                <Show when={peers().length === 0}>
+                  <div class="p-4 text-center text-sm opacity-50">
+                    {t("task-detail.peers.empty")()}
+                  </div>
+                </Show>
+              </div>
+            </div>
+          </Show>
+
+          <Show when={activeTab() === "files"}>
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+              <div class="card-body">
+                <h4 class="text-sm font-bold mb-4">
+                  {t("task-detail.files")()}
+                </h4>
+                <div class="space-y-4">
+                  {state.selectedTaskDetail?.files?.map((file: any) => (
+                    <div class="p-3 bg-base-200 rounded-lg text-xs space-y-2">
+                      <div class="font-bold">{file.path.split("/").pop()}</div>
+                      <div class="text-[10px] opacity-70">
+                        {file.uris?.map((u: any) => (
+                          <div>
+                            {u.uri} ({u.status})
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Show>
+
+          <div class="flex gap-2 pt-4">
+            <button
+              onClick={() =>
+                handleAction(
+                  state.selectedTaskDetail?.status === "active"
+                    ? "pause"
+                    : "resume",
+                )
+              }
+              disabled={isActionLoading()}
+              class={`btn flex-1 ${
                 state.selectedTaskDetail?.status === "active"
-                  ? "pause"
-                  : "resume",
-              )
-            }
-            disabled={isActionLoading()}
-            class={`btn flex-1 ${
-              state.selectedTaskDetail?.status === "active"
-                ? "btn-warning"
-                : "btn-success"
-            }`}
-          >
-            {isActionLoading()
-              ? t("common.processing")()
-              : state.selectedTaskDetail?.status === "active"
-                ? t("task-detail.pause")()
-                : t("task-detail.resume")()}
-          </button>
-          <button
-            onClick={() => aria2Store.removeTask(state.selectedTaskDetail!.gid)}
-            class="btn btn-error btn-outline"
-          >
-            {t("common.delete")()}
-          </button>
+                  ? "btn-warning"
+                  : "btn-success"
+              }`}
+            >
+              {isActionLoading()
+                ? t("common.processing")()
+                : state.selectedTaskDetail?.status === "active"
+                  ? t("task-detail.pause")()
+                  : t("task-detail.resume")()}
+            </button>
+            <button
+              onClick={() =>
+                aria2Store.removeTask(state.selectedTaskDetail!.gid)
+              }
+              class="btn btn-error btn-outline"
+            >
+              {t("common.delete")()}
+            </button>
+          </div>
         </div>
       </div>
     </Show>

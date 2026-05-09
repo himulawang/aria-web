@@ -337,7 +337,14 @@ export const aria2Store = {
   async removeTask(gid: string) {
     if (!client) await this.connect();
     try {
-      await client!.request("aria2.remove", [gid]);
+      const task = state.tasks.find((t) => t.gid === gid);
+      const isActive = task?.status === "active" || task?.status === "waiting";
+
+      if (isActive) {
+        await client!.request("aria2.remove", [gid]);
+      } else {
+        await client!.request("aria2.removeDownloadResult", [gid]);
+      }
       await this.fetchTasks();
     } catch (e) {
       logger.error(`Failed to remove task: ${e}`, LOG_CONTEXT);

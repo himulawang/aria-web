@@ -1,7 +1,13 @@
-import { For, createSignal, type Component } from "solid-js";
+import { For, createSignal, type Component, Show } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import { formatSpeed } from "../utils/format";
+import {
+  HiOutlinePlay,
+  HiOutlinePause,
+  HiOutlineTrash,
+  HiOutlinePlus,
+} from "solid-icons/hi";
 
 const TaskItem: Component<{ task: any }> = (props) => {
   const state = aria2Store.getState();
@@ -88,13 +94,28 @@ const TaskItem: Component<{ task: any }> = (props) => {
 };
 
 const TaskList: Component = () => {
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "active":
+        return "badge-primary";
+      case "paused":
+        return "badge-warning";
+      case "complete":
+        return "badge-success";
+      case "error":
+        return "badge-error";
+      default:
+        return "badge-ghost";
+    }
+  };
+
   const state = aria2Store.getState();
   const [selectedTasks, setSelectedTasks] = createSignal<Set<string>>(
     new Set(),
   );
   const [filter, setFilter] = createSignal<
     "all" | "active" | "waiting" | "stopped"
-  >("all");
+  >("active");
 
   const toggleTask = (gid: string) => {
     const next = new Set(selectedTasks());
@@ -110,6 +131,20 @@ const TaskList: Component = () => {
       setSelectedTasks(new Set(filteredTasks().map((t) => t.gid)));
     }
   };
+
+  const hasActiveTasks = () =>
+    Array.from(selectedTasks()).some(
+      (gid) =>
+        state.tasks.find((t) => t.gid === gid)?.status === "active" ||
+        state.tasks.find((t) => t.gid === gid)?.status === "waiting",
+    );
+
+  const hasNonCompletedTasks = () =>
+    Array.from(selectedTasks()).some(
+      (gid) =>
+        state.tasks.find((t) => t.gid === gid)?.status !== "complete" &&
+        state.tasks.find((t) => t.gid === gid)?.status !== "error",
+    );
 
   const filteredTasks = () => {
     const tasks = state.tasks;
@@ -129,49 +164,65 @@ const TaskList: Component = () => {
     <div class="space-y-4">
       <div class="flex items-center justify-between">
         <h3 class="text-xl font-bold">{t("task-list.title")()}</h3>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1">
           <button
-            onClick={async () => {
-              await aria2Store.client!.request("aria2.pauseAll");
-              await aria2Store.fetchTasks();
+            onClick={() => {
+              // Add task logic here
             }}
-            class="btn btn-sm btn-warning btn-outline"
+            class="btn btn-sm btn-ghost btn-square"
+            title={t("common.add")()}
           >
-            {t("common.pause-all")()}
+            <HiOutlinePlus class="w-5 h-5" />
           </button>
           <button
             onClick={async () => {
-              await aria2Store.client!.request("aria2.unpauseAll");
+              for (const gid of selectedTasks()) {
+                await aria2Store.pauseTask(gid);
+              }
               await aria2Store.fetchTasks();
             }}
-            class="btn btn-sm btn-success btn-outline"
+            class="btn btn-sm btn-ghost btn-square"
+            title={t("task-detail.pause")()}
+            disabled={selectedTasks().size === 0 || !hasActiveTasks()}
           >
-            {t("common.resume-all")()}
+            <HiOutlinePause class="w-5 h-5" />
           </button>
           <button
             onClick={async () => {
-              await aria2Store.client!.request("aria2.purgeDownloadResult");
+              for (const gid of selectedTasks()) {
+                await aria2Store.resumeTask(gid);
+              }
               await aria2Store.fetchTasks();
             }}
-            class="btn btn-sm btn-error btn-outline"
+            class="btn btn-sm btn-ghost btn-square"
+            title={t("task-detail.resume")()}
+            disabled={selectedTasks().size === 0 || !hasNonCompletedTasks()}
           >
-            {t("common.purge-all")()}
+            <HiOutlinePlay class="w-5 h-5" />
           </button>
           <button
-            onClick={() => aria2Store.fetchTasks()}
-            class="btn btn-sm btn-outline"
+            onClick={async () => {
+              for (const gid of selectedTasks()) {
+                await aria2Store.removeTask(gid);
+              }
+              setSelectedTasks(new Set());
+              await aria2Store.fetchTasks();
+            }}
+            class="btn btn-sm btn-ghost btn-square text-error"
+            title={t("common.delete")()}
+            disabled={selectedTasks().size === 0}
           >
-            {t("common.refresh")()}
+            <HiOutlineTrash class="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      <div class="tabs tabs-boxed gap-1">
+      <div class="tabs tabs-boxed gap-1 flex justify-start">
         {[
-          { id: "all", label: t("task-list.filter.all") },
           { id: "active", label: t("task-list.filter.active") },
           { id: "waiting", label: t("task-list.filter.waiting") },
           { id: "stopped", label: t("task-list.filter.stopped") },
+          { id: "all", label: t("task-list.filter.all") },
         ].map((tab) => (
           <button
             onClick={() => setFilter(tab.id as any)}
@@ -193,9 +244,9 @@ const TaskList: Component = () => {
                   onClick={toggleAll}
                 />
               </th>
-              <th>Task</th>
-              <th>Progress</th>
-              <th class="text-right">Status</th>
+              <th>{t("task-list.title")()}</th>
+              <th>{t("task-detail.progress")()}</th>
+              <th class="text-right">{t("nav.status")()}</th>
             </tr>
           </thead>
           <tbody>
@@ -210,8 +261,9 @@ const TaskList: Component = () => {
                   class={`hover cursor-pointer ${
                     state.selectedTaskId === task.gid ? "bg-base-200" : ""
                   }`}
+                  style="min-height: 32px;"
                 >
-                  <td>
+                  <td class="p-2">
                     <input
                       type="checkbox"
                       class="checkbox checkbox-sm"
@@ -222,28 +274,18 @@ const TaskList: Component = () => {
                       }}
                     />
                   </td>
-                  <td class="font-medium">
-                    <div class="flex flex-col gap-1">
-                      <span class="truncate max-w-xs block">
+                  <td class="p-2">
+                    <div class="flex flex-col">
+                      <span class="truncate max-w-sm block text-sm font-medium">
                         {task.files[0]?.path?.split("/").pop() ||
                           t("task-status.unknown")()}
                       </span>
-                      <div class="flex items-center gap-2">
-                        <span
-                          class={`badge badge-xs ${task.status === "active" ? "badge-primary" : task.status === "paused" ? "badge-warning" : task.status === "complete" ? "badge-success" : task.status === "error" ? "badge-error" : "badge-ghost"}`}
-                        >
-                          {t("task-status." + task.status)() || task.status}
-                        </span>
-                        <span class="text-xs opacity-50">
-                          {formatSpeed(Number(task.downloadSpeed))}
-                        </span>
-                      </div>
                     </div>
                   </td>
-                  <td>
+                  <td class="p-2">
                     <div class="flex items-center gap-2">
                       <progress
-                        class="progress progress-primary w-24"
+                        class="progress progress-primary w-24 h-2"
                         value={
                           task.totalLength > 0
                             ? Math.min(
@@ -270,19 +312,19 @@ const TaskList: Component = () => {
                       </span>
                     </div>
                   </td>
-                  <td class="text-right flex justify-end gap-2">
-                    <Show when={task.status !== "active"}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          aria2Store.removeDownloadResult(task.gid);
-                        }}
-                        class="btn btn-xs btn-ghost btn-error"
+                  <td class="p-2 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                      <Show when={task.status === "active"}>
+                        <span class="text-xs opacity-50">
+                          {formatSpeed(Number(task.downloadSpeed))}
+                        </span>
+                      </Show>
+                      <span
+                        class={`badge badge-sm ${getStatusStyle(task.status)}`}
                       >
-                        {t("common.delete")()}
-                      </button>
-                    </Show>
-                    {task.status}
+                        {t(`task-status.${task.status}`)()}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               )}

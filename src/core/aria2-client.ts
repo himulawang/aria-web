@@ -1,6 +1,9 @@
+import { logger } from "./logger";
 import type { Aria2Config } from "./types";
 import { HttpRpcClient } from "./http-client";
 import { WebSocketRpcClient } from "./ws-client";
+
+const LOG_CONTEXT = "Aria2Client";
 
 export class Aria2Client {
   private config: Aria2Config;
@@ -59,15 +62,16 @@ export class Aria2Client {
    */
   async testConnection(): Promise<boolean> {
     try {
-      console.log(
-        "[Aria2Client] Testing connection with aria2.getGlobalStat...",
+      logger.info(
+        "Testing connection with aria2.getGlobalStat...",
+        LOG_CONTEXT,
       );
       // 调用一个无需参数且轻量的接口来验证
       await this.request("aria2.getGlobalStat");
-      console.log("[Aria2Client] Connection test passed!");
+      logger.info("Connection test passed!", LOG_CONTEXT);
       return true;
     } catch (e) {
-      console.error("[Aria2Client] Connection test failed:", e);
+      logger.error(`Connection test failed: ${e}`, LOG_CONTEXT);
       return false;
     }
   }
@@ -79,9 +83,12 @@ export class Aria2Client {
       // Debug: List available methods to diagnose "No such method" errors
       try {
         const methods = await this.request("system.listMethods");
-        console.log("[Aria2Client] Available RPC methods:", methods);
+        logger.debug(
+          `Available RPC methods: ${JSON.stringify(methods)}`,
+          LOG_CONTEXT,
+        );
       } catch (e) {
-        console.warn("[Aria2Client] Could not list methods:", e);
+        logger.warn(`Could not list methods: ${e}`, LOG_CONTEXT);
       }
 
       // 连接建立后立即验证
