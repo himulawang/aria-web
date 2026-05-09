@@ -18,7 +18,12 @@ const TaskDetail: Component = () => {
   // Fetch peers when tab changes to 'peers'
   createEffect(() => {
     if (activeTab() === "peers" && state.selectedTaskDetail?.gid) {
-      aria2Store.getPeers(state.selectedTaskDetail.gid).then(setPeers);
+      setPeers([]); // Clear previous peers immediately
+      aria2Store.getPeers(state.selectedTaskDetail.gid).then((p) => {
+        if (p) setPeers(p);
+      });
+    } else {
+      setPeers([]);
     }
   });
 
@@ -50,6 +55,7 @@ const TaskDetail: Component = () => {
   // Click outside to close
   createEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
+      // 只有在点击的是 Detail Panel 外部时才关闭
       if (
         detailRef &&
         !detailRef.contains(e.target as Node) &&
@@ -113,10 +119,20 @@ const TaskDetail: Component = () => {
                   <tbody>
                     <tr>
                       <th class="text-xs opacity-50 w-1/3">
-                        {t("task-detail.gid")()}
+                        {t("task-detail.fileName")()}
                       </th>
-                      <td class="font-mono text-xs truncate">
-                        {state.selectedTaskDetail?.gid}
+                      <td class="text-xs break-words whitespace-normal">
+                        {state.selectedTaskDetail?.files?.[0]?.path
+                          ?.split("/")
+                          .pop() || t("task-status.unknown")()}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th class="text-xs opacity-50 w-1/3">
+                        {t("task-detail.directory")()}
+                      </th>
+                      <td class="text-xs break-words whitespace-normal">
+                        {state.selectedTaskDetail?.dir}
                       </td>
                     </tr>
                     <tr>
@@ -205,9 +221,9 @@ const TaskDetail: Component = () => {
                   {state.selectedTaskDetail?.files?.map((file: any) => (
                     <div class="p-3 bg-base-200 rounded-lg text-xs space-y-2">
                       <div class="font-bold">{file.path.split("/").pop()}</div>
-                      <div class="text-[10px] opacity-70">
+                      <div class="text-[10px] opacity-70 break-all whitespace-normal">
                         {file.uris?.map((u: any) => (
-                          <div>
+                          <div class="mb-1">
                             {u.uri} ({u.status})
                           </div>
                         ))}
@@ -221,30 +237,10 @@ const TaskDetail: Component = () => {
 
           <div class="flex gap-2 pt-4">
             <button
-              onClick={() =>
-                handleAction(
-                  state.selectedTaskDetail?.status === "active"
-                    ? "pause"
-                    : "resume",
-                )
-              }
-              disabled={isActionLoading()}
-              class={`btn flex-1 ${
-                state.selectedTaskDetail?.status === "active"
-                  ? "btn-warning"
-                  : "btn-success"
-              }`}
-            >
-              {isActionLoading()
-                ? t("common.processing")()
-                : state.selectedTaskDetail?.status === "active"
-                  ? t("task-detail.pause")()
-                  : t("task-detail.resume")()}
-            </button>
-            <button
-              onClick={() =>
-                aria2Store.removeTask(state.selectedTaskDetail!.gid)
-              }
+              onClick={() => {
+                aria2Store.removeTask(state.selectedTaskDetail!.gid);
+                aria2Store.setSelectedTask(null);
+              }}
               class="btn btn-error btn-outline"
             >
               {t("common.delete")()}

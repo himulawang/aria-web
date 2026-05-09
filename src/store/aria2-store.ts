@@ -295,19 +295,38 @@ export const aria2Store = {
     try {
       const detail = await client!.request<any>("aria2.tellStatus", [gid]);
       setState("selectedTaskDetail", detail);
+      return detail;
+    } catch (e: any) {
+      if (e.message?.includes("No peer data is available")) {
+        logger.debug(
+          `Peer data unavailable for ${gid}, ignoring.`,
+          LOG_CONTEXT,
+        );
+        return null;
+      }
+      logger.warn(`Failed to fetch detail for task ${gid}: ${e}`, LOG_CONTEXT);
+      return null;
+    }
+  },
+
+  async addTask(uris: string[], options: any = {}) {
+    if (!client) await this.connect();
+    try {
+      await client!.request("aria2.addUri", [uris, options]);
+      await this.fetchTasks();
     } catch (e) {
-      logger.error(`Failed to fetch detail for task ${gid}: ${e}`, LOG_CONTEXT);
+      logger.error(`Failed to add task: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },
 
-  async addTask(uris: string[]) {
+  async addTorrentTask(base64Content: string, options: any = {}) {
     if (!client) await this.connect();
     try {
-      await client!.request("aria2.addUri", [uris]);
+      await client!.request("aria2.addTorrent", [base64Content, [], options]);
       await this.fetchTasks();
     } catch (e) {
-      logger.error(`Failed to add task: ${e}`, LOG_CONTEXT);
+      logger.error(`Failed to add torrent task: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },
@@ -345,9 +364,12 @@ export const aria2Store = {
       } else {
         await client!.request("aria2.removeDownloadResult", [gid]);
       }
-      await this.fetchTasks();
+
+      // Local UI update
+      setState("tasks", (tasks) => tasks.filter((t) => t.gid !== gid));
+      this.fetchGlobalStat().catch(() => {});
     } catch (e) {
-      logger.error(`Failed to remove task: ${e}`, LOG_CONTEXT);
+      logger.error(`Failed to remove task ${gid}: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },
@@ -678,10 +700,21 @@ export const aria2Store = {
     client.on("aria2.onDownloadComplete", (params: any[]) => {
       const gid = params[0].gid;
       logger.debug(`Task completed: ${gid}`, LOG_CONTEXT);
-      this.fetchTaskDetail(gid).catch((err) =>
-        logger.error(`Error in onDownloadComplete: ${err}`, LOG_CONTEXT),
-      );
+
+      // 更新任务状态为 complete
+      setState("tasks", (t) => t.gid === gid, { status: "complete" });
+
+      // 延迟拉取详情，给后端更新元数据的时间
+      setTimeout(() => {
+        this.fetchTaskDetail(gid).catch((err) =>
+          logger.warn(`Deferred fetch failed for ${gid}: ${err}`, LOG_CONTEXT),
+        );
+        // 强制全量刷新以确保任务列表数据准确
+        this.fetchTasks();
+      }, 500);
+
       notificationStore.add(`Download completed: ${gid}`, "success");
+
       this.fetchGlobalStat().catch((err) =>
         logger.error(
           `Error fetching global stat on complete: ${err}`,

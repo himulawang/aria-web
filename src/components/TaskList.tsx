@@ -1,7 +1,9 @@
 import { For, createSignal, type Component, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import { formatSpeed } from "../utils/format";
+import AddTask from "./AddTask"; // Import AddTask to reuse its form logic
 import {
   HiOutlinePlay,
   HiOutlinePause,
@@ -113,6 +115,7 @@ const TaskList: Component = () => {
   const [selectedTasks, setSelectedTasks] = createSignal<Set<string>>(
     new Set(),
   );
+  const [isModalOpen, setIsModalOpen] = createSignal(false);
   const [filter, setFilter] = createSignal<
     "all" | "active" | "waiting" | "stopped"
   >("active");
@@ -162,13 +165,26 @@ const TaskList: Component = () => {
 
   return (
     <div class="space-y-4">
+      <Show when={isModalOpen()}>
+        <Portal>
+          <div class="modal modal-open">
+            <div class="modal-box w-11/12 max-w-2xl">
+              <h3 class="font-bold text-lg mb-4">{t("nav.new")()}</h3>
+              <AddTask onClose={() => setIsModalOpen(false)} />
+            </div>
+            <div
+              class="modal-backdrop"
+              onClick={() => setIsModalOpen(false)}
+            ></div>
+          </div>
+        </Portal>
+      </Show>
+
       <div class="flex items-center justify-between">
         <h3 class="text-xl font-bold">{t("task-list.title")()}</h3>
         <div class="flex items-center gap-1">
           <button
-            onClick={() => {
-              // Add task logic here
-            }}
+            onClick={() => setIsModalOpen(true)}
             class="btn btn-sm btn-ghost btn-square"
             title={t("common.add")()}
           >
