@@ -1,7 +1,7 @@
-import { type Component, type JSX, createSignal, For } from "solid-js";
+import { type Component, type JSX, createSignal, For, Show } from "solid-js";
 import { t } from "../i18n";
 import Toast from "./Toast";
-import ConnectionStatus from "./ConnectionStatus";
+import ConnectionStatus, { SpeedSummary } from "./ConnectionStatus";
 import {
   HiOutlineArrowDownTray,
   HiOutlineCog6Tooth,
@@ -21,6 +21,8 @@ interface LayoutProps {
 
 const Layout: Component<LayoutProps> = (props) => {
   const [isSettingsExpanded, setIsSettingsExpanded] = createSignal(true);
+  const [isCollapsed, setIsCollapsed] = createSignal(false);
+  const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
 
   const navItems = [
     {
@@ -66,32 +68,73 @@ const Layout: Component<LayoutProps> = (props) => {
       </div>
       <div class="drawer-side">
         <label htmlFor="my-drawer" class="drawer-overlay"></label>
-        <aside class="menu p-4 w-80 h-full bg-base-100 text-base-content border-r border-base-300 flex flex-col">
-          <div class="px-4 py-2 text-xl font-bold mb-4">AriaWeb</div>
+        <aside
+          class={`menu p-4 h-full bg-base-100 text-base-content border-r border-base-300 flex flex-col transition-all duration-300 ${isCollapsed() ? "w-16" : "w-64"}`}
+        >
+          <div class="flex items-center justify-between mb-4">
+            <div
+              class={`px-2 py-2 text-xl font-bold ${isCollapsed() ? "hidden" : "block"}`}
+            >
+              AriaWeb
+            </div>
+            <button
+              class="btn btn-ghost btn-xs"
+              onClick={() => setIsCollapsed(!isCollapsed())}
+            >
+              {isCollapsed() ? ">" : "<"}
+            </button>
+          </div>
           <nav class="flex-1">
             <For each={navItems.filter((i) => i.position === "sidebar")}>
               {(item) =>
                 item.view === "settings" ? (
-                  <li>
-                    <details open={isSettingsExpanded()} class="group">
-                      <summary
-                        onClick={(e) => {
-                          e.preventDefault();
-                          props.setView("settings");
+                  <li class="relative">
+                    <button
+                      onClick={() => {
+                        console.log("DEBUG: Button Clicked");
+                        if (isCollapsed()) {
+                          setIsPopoverOpen(!isPopoverOpen());
+                        } else {
                           setIsSettingsExpanded(!isSettingsExpanded());
-                        }}
-                        class={`cursor-pointer ${props.currentView === "settings" ? "active" : ""}`}
-                      >
-                        <item.icon class="w-5 h-5" />
+                          props.setView("settings");
+                        }
+                      }}
+                      class={`w-full flex items-center ${!isCollapsed() && props.currentView === "settings" ? "active" : ""}`}
+                    >
+                      <item.icon class="w-5 h-5" />
+                      <span class={isCollapsed() ? "hidden" : "block"}>
                         {item.label()}
-                      </summary>
-                      <ul>
+                      </span>
+                    </button>
+                    {/* Popover */}
+                    <Portal>
+                      <Show when={isCollapsed() && isPopoverOpen()}>
+                        <div class="fixed left-16 top-20 z-[9999] w-48 bg-base-100 shadow-2xl border border-base-300 rounded-lg py-2">
+                          <For each={props.settingsCategories}>
+                            {(category) => (
+                              <a
+                                class="block px-4 py-2 hover:bg-base-200 cursor-pointer text-sm"
+                                onClick={() => {
+                                  props.setActiveSubTab(category);
+                                  props.setView("settings");
+                                  setIsPopoverOpen(false);
+                                }}
+                              >
+                                {t(`nav.settings.${category}`)() || category}
+                              </a>
+                            )}
+                          </For>
+                        </div>
+                      </Show>
+                    </Portal>
+                    {/* Normal list for expanded */}
+                    {!isCollapsed() && (
+                      <ul class={isSettingsExpanded() ? "block" : "hidden"}>
                         <For each={props.settingsCategories}>
                           {(category) => (
                             <li>
                               <a
-                                onClick={(e) => {
-                                  e.preventDefault();
+                                onClick={() => {
                                   props.setActiveSubTab(category);
                                   props.setView("settings");
                                 }}
@@ -107,7 +150,7 @@ const Layout: Component<LayoutProps> = (props) => {
                           )}
                         </For>
                       </ul>
-                    </details>
+                    )}
                   </li>
                 ) : (
                   <li>
@@ -119,15 +162,18 @@ const Layout: Component<LayoutProps> = (props) => {
                       class={props.currentView === item.view ? "active" : ""}
                     >
                       <item.icon class="w-5 h-5" />
-                      {item.label()}
+                      <span class={isCollapsed() ? "hidden" : "block"}>
+                        {item.label()}
+                      </span>
                     </a>
                   </li>
                 )
               }
             </For>
           </nav>
-          <div class="mt-auto pt-4 border-t border-base-300">
-            <ConnectionStatus />
+          <div class="mt-auto pt-4 border-t border-base-300 flex flex-col gap-3">
+            <SpeedSummary isCollapsed={isCollapsed()} />
+            <ConnectionStatus isCollapsed={isCollapsed()} />
           </div>
         </aside>
       </div>

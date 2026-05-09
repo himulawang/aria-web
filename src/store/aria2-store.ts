@@ -358,6 +358,60 @@ export const aria2Store = {
     }
   },
 
+  async getPeers(gid: string): Promise<any[]> {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<any[]>("aria2.getPeers", [gid]);
+    } catch (e) {
+      return [];
+    }
+  },
+
+  async getServers(gid: string): Promise<any[]> {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<any[]>("aria2.getServers", [gid]);
+    } catch (e) {
+      return [];
+    }
+  },
+
+  async removeDownloadResult(gid: string): Promise<string> {
+    if (!client) await this.connect();
+    try {
+      const result = await client!.request<string>(
+        "aria2.removeDownloadResult",
+        [gid],
+      );
+      // 成功移除后更新任务列表
+      await this.fetchTasks();
+      return result;
+    } catch (e) {
+      return "Error";
+    }
+  },
+
+  async changeUri(
+    gid: string,
+    fileIndex: number,
+    delUris: string[],
+    addUris: string[],
+    position?: number,
+  ): Promise<[number, number]> {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<[number, number]>("aria2.changeUri", [
+        gid,
+        fileIndex,
+        delUris,
+        addUris,
+        position,
+      ]);
+    } catch (e) {
+      return [0, 0];
+    }
+  },
+
   async changeOption(name: string, value: any) {
     if (!client) await this.connect();
     try {

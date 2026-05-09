@@ -1,11 +1,26 @@
-import { type Component, Show, createSignal } from "solid-js";
+import {
+  type Component,
+  Show,
+  createSignal,
+  createEffect,
+  For,
+} from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import { formatSize, formatSpeed } from "../utils/format";
 
 const TaskDetail: Component = () => {
   const state = aria2Store.getState();
+  const [activeTab, setActiveTab] = createSignal("overview");
+  const [peers, setPeers] = createSignal<any[]>([]);
   const [isActionLoading, setIsActionLoading] = createSignal(false);
+
+  // Fetch peers when tab changes to 'peers'
+  createEffect(() => {
+    if (activeTab() === "peers" && state.selectedTaskDetail?.gid) {
+      aria2Store.getPeers(state.selectedTaskDetail.gid).then(setPeers);
+    }
+  });
 
   const handleAction = async (action: "pause" | "resume") => {
     setIsActionLoading(true);
@@ -53,126 +68,137 @@ const TaskDetail: Component = () => {
           </div>
         </div>
 
-        <div class="card bg-base-100 shadow-sm border border-base-300">
-          <div class="card-body p-0">
-            <table class="table w-full">
-              <tbody>
-                <tr>
-                  <th class="text-xs opacity-50 w-1/3">
-                    {t("task-detail.gid")()}
-                  </th>
-                  <td class="font-mono text-xs truncate">
-                    {state.selectedTaskDetail?.gid}
-                  </td>
-                </tr>
-                <tr>
-                  <th class="text-xs opacity-50">
-                    {t("task-detail.progress")()}
-                  </th>
-                  <td>
-                    <div class="flex items-center gap-3">
-                      <progress
-                        class="progress progress-primary w-full max-w-xs"
-                        value={state.selectedTaskDetail!.completedLength}
-                        max={state.selectedTaskDetail!.totalLength || 1}
-                      ></progress>
-                      <span class="text-xs w-8">
-                        {Math.round(
-                          (state.selectedTaskDetail!.completedLength /
-                            (state.selectedTaskDetail!.totalLength || 1)) *
-                            100,
-                        )}
-                        %
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <th class="text-xs opacity-50">
-                    {t("task-detail.totalSize")()}
-                  </th>
-                  <td class="text-sm">
-                    {formatSize(Number(state.selectedTaskDetail!.totalLength))}
-                  </td>
-                </tr>
-                <tr>
-                  <th class="text-xs opacity-50">
-                    {t("task-detail.downSpeed")()}
-                  </th>
-                  <td class="text-sm">
-                    {formatSpeed(
-                      Number(state.selectedTaskDetail!.downloadSpeed),
+        <div class="tabs tabs-boxed">
+          <button
+            class={`tab ${activeTab() === "overview" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("overview")}
+          >
+            {t("task-detail.tabs.overview")()}
+          </button>
+          <button
+            class={`tab ${activeTab() === "peers" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("peers")}
+          >
+            {t("task-detail.tabs.peers")()}
+          </button>
+          <button
+            class={`tab ${activeTab() === "files" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("files")}
+          >
+            {t("task-detail.tabs.files")()}
+          </button>
+        </div>
+
+        <Show when={activeTab() === "overview"}>
+          <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-0">
+              <table class="table w-full">
+                <tbody>
+                  <tr>
+                    <th class="text-xs opacity-50 w-1/3">
+                      {t("task-detail.gid")()}
+                    </th>
+                    <td class="font-mono text-xs truncate">
+                      {state.selectedTaskDetail?.gid}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th class="text-xs opacity-50">
+                      {t("task-detail.progress")()}
+                    </th>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <progress
+                          class="progress progress-primary w-full max-w-xs"
+                          value={state.selectedTaskDetail!.completedLength}
+                          max={state.selectedTaskDetail!.totalLength || 1}
+                        ></progress>
+                        <span class="text-xs w-8">
+                          {Math.round(
+                            (state.selectedTaskDetail!.completedLength /
+                              (state.selectedTaskDetail!.totalLength || 1)) *
+                              100,
+                          )}
+                          %
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th class="text-xs opacity-50">
+                      {t("task-detail.totalSize")()}
+                    </th>
+                    <td class="text-sm">
+                      {formatSize(
+                        Number(state.selectedTaskDetail!.totalLength),
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Show>
+
+        <Show when={activeTab() === "peers"}>
+          <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-0">
+              <table class="table w-full">
+                <thead>
+                  <tr>
+                    <th class="text-xs">IP</th>
+                    <th class="text-xs">Port</th>
+                    <th class="text-xs">DL</th>
+                    <th class="text-xs">UL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For each={peers()}>
+                    {(peer) => (
+                      <tr>
+                        <td class="text-xs font-mono">{peer.ip}</td>
+                        <td class="text-xs">{peer.port}</td>
+                        <td class="text-xs">
+                          {formatSpeed(Number(peer.downloadSpeed))}
+                        </td>
+                        <td class="text-xs">
+                          {formatSpeed(Number(peer.uploadSpeed))}
+                        </td>
+                      </tr>
                     )}
-                  </td>
-                </tr>
-                <tr>
-                  <th class="text-xs opacity-50">
-                    {t("task-detail.upSpeed")()}
-                  </th>
-                  <td class="text-sm">
-                    {formatSpeed(Number(state.selectedTaskDetail!.uploadSpeed))}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="card bg-base-100 shadow-sm border border-base-300">
-          <div class="card-body">
-            <h4 class="text-sm font-bold mb-4">
-              {t("task-detail.speedLimits")()}
-            </h4>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text text-xs">
-                    {t("task-detail.downLimit")()} (KB/s)
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  placeholder={t("task-detail.unlimited")()}
-                  onBlur={(e) =>
-                    handleSpeedChange("down", e.currentTarget.value)
-                  }
-                  class="input input-bordered input-sm w-full"
-                />
-              </div>
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text text-xs">
-                    {t("task-detail.upLimit")()} (KB/s)
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  placeholder={t("task-detail.unlimited")()}
-                  onBlur={(e) => handleSpeedChange("up", e.currentTarget.value)}
-                  class="input input-bordered input-sm w-full"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card bg-base-100 shadow-sm border border-base-300">
-          <div class="card-body">
-            <h4 class="text-sm font-bold mb-4">{t("task-detail.files")()}</h4>
-            <div class="space-y-2">
-              {state.selectedTaskDetail?.files?.map((file: any) => (
-                <div class="flex justify-between items-center p-2 bg-base-200 rounded-lg text-xs">
-                  <span class="truncate mr-2" title={file.path}>
-                    {file.path.split("/").pop()}
-                  </span>
-                  <span class="opacity-60 whitespace-nowrap">
-                    {formatSize(Number(file.length))}
-                  </span>
+                  </For>
+                </tbody>
+              </table>
+              <Show when={peers().length === 0}>
+                <div class="p-4 text-center text-sm opacity-50">
+                  {t("task-detail.peers.empty")()}
                 </div>
-              ))}
+              </Show>
             </div>
           </div>
-        </div>
+        </Show>
+
+        <Show when={activeTab() === "files"}>
+          <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body">
+              <h4 class="text-sm font-bold mb-4">{t("task-detail.files")()}</h4>
+              <div class="space-y-4">
+                {state.selectedTaskDetail?.files?.map((file: any) => (
+                  <div class="p-3 bg-base-200 rounded-lg text-xs space-y-2">
+                    <div class="font-bold">{file.path.split("/").pop()}</div>
+                    <div class="text-[10px] opacity-70">
+                      {file.uris?.map((u: any) => (
+                        <div>
+                          {u.uri} ({u.status})
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Show>
 
         <div class="flex gap-2 pt-4">
           <button

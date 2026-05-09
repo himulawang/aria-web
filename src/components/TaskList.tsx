@@ -69,16 +69,47 @@ const TaskItem: Component<{ task: any }> = (props) => {
           <span class="text-xs">{progress}%</span>
         </div>
       </td>
-      <td class="text-right opacity-70">{props.task.status}</td>
+      <td class="text-right flex justify-end gap-2">
+        <Show when={props.task.status !== "active"}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              aria2Store.removeDownloadResult(props.task.gid);
+            }}
+            class="btn btn-xs btn-ghost btn-error"
+          >
+            {t("common.delete")()}
+          </button>
+        </Show>
+        {props.task.status}
+      </td>
     </tr>
   );
 };
 
 const TaskList: Component = () => {
   const state = aria2Store.getState();
+  const [selectedTasks, setSelectedTasks] = createSignal<Set<string>>(
+    new Set(),
+  );
   const [filter, setFilter] = createSignal<
     "all" | "active" | "waiting" | "stopped"
   >("all");
+
+  const toggleTask = (gid: string) => {
+    const next = new Set(selectedTasks());
+    if (next.has(gid)) next.delete(gid);
+    else next.add(gid);
+    setSelectedTasks(next);
+  };
+
+  const toggleAll = () => {
+    if (selectedTasks().size === filteredTasks().length) {
+      setSelectedTasks(new Set());
+    } else {
+      setSelectedTasks(new Set(filteredTasks().map((t) => t.gid)));
+    }
+  };
 
   const filteredTasks = () => {
     const tasks = state.tasks;
@@ -98,12 +129,41 @@ const TaskList: Component = () => {
     <div class="space-y-4">
       <div class="flex items-center justify-between">
         <h3 class="text-xl font-bold">{t("task-list.title")()}</h3>
-        <button
-          onClick={() => aria2Store.fetchTasks()}
-          class="btn btn-sm btn-outline"
-        >
-          {t("common.refresh")()}
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              await aria2Store.client!.request("aria2.pauseAll");
+              await aria2Store.fetchTasks();
+            }}
+            class="btn btn-sm btn-warning btn-outline"
+          >
+            {t("common.pause-all")()}
+          </button>
+          <button
+            onClick={async () => {
+              await aria2Store.client!.request("aria2.unpauseAll");
+              await aria2Store.fetchTasks();
+            }}
+            class="btn btn-sm btn-success btn-outline"
+          >
+            {t("common.resume-all")()}
+          </button>
+          <button
+            onClick={async () => {
+              await aria2Store.client!.request("aria2.purgeDownloadResult");
+              await aria2Store.fetchTasks();
+            }}
+            class="btn btn-sm btn-error btn-outline"
+          >
+            {t("common.purge-all")()}
+          </button>
+          <button
+            onClick={() => aria2Store.fetchTasks()}
+            class="btn btn-sm btn-outline"
+          >
+            {t("common.refresh")()}
+          </button>
+        </div>
       </div>
 
       <div class="tabs tabs-boxed gap-1">
@@ -126,6 +186,13 @@ const TaskList: Component = () => {
         <table class="table table-zebra w-full">
           <thead>
             <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  onClick={toggleAll}
+                />
+              </th>
               <th>Task</th>
               <th>Progress</th>
               <th class="text-right">Status</th>
@@ -133,7 +200,92 @@ const TaskList: Component = () => {
           </thead>
           <tbody>
             <For each={filteredTasks()}>
-              {(task) => <TaskItem task={task} />}
+              {(task) => (
+                <tr
+                  onClick={() => {
+                    if (state.selectedTaskId !== task.gid) {
+                      aria2Store.setSelectedTask(task.gid);
+                    }
+                  }}
+                  class={`hover cursor-pointer ${
+                    state.selectedTaskId === task.gid ? "bg-base-200" : ""
+                  }`}
+                >
+                  <td>
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm"
+                      checked={selectedTasks().has(task.gid)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleTask(task.gid);
+                      }}
+                    />
+                  </td>
+                  <td class="font-medium">
+                    <div class="flex flex-col gap-1">
+                      <span class="truncate max-w-xs block">
+                        {task.files[0]?.path?.split("/").pop() ||
+                          t("task-status.unknown")()}
+                      </span>
+                      <div class="flex items-center gap-2">
+                        <span
+                          class={`badge badge-xs ${task.status === "active" ? "badge-primary" : task.status === "paused" ? "badge-warning" : task.status === "complete" ? "badge-success" : task.status === "error" ? "badge-error" : "badge-ghost"}`}
+                        >
+                          {t("task-status." + task.status)() || task.status}
+                        </span>
+                        <span class="text-xs opacity-50">
+                          {formatSpeed(Number(task.downloadSpeed))}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <progress
+                        class="progress progress-primary w-24"
+                        value={
+                          task.totalLength > 0
+                            ? Math.min(
+                                100,
+                                Math.round(
+                                  (task.completedLength / task.totalLength) *
+                                    100,
+                                ),
+                              )
+                            : 0
+                        }
+                        max="100"
+                      ></progress>
+                      <span class="text-xs">
+                        {task.totalLength > 0
+                          ? Math.min(
+                              100,
+                              Math.round(
+                                (task.completedLength / task.totalLength) * 100,
+                              ),
+                            )
+                          : 0}
+                        %
+                      </span>
+                    </div>
+                  </td>
+                  <td class="text-right flex justify-end gap-2">
+                    <Show when={task.status !== "active"}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          aria2Store.removeDownloadResult(task.gid);
+                        }}
+                        class="btn btn-xs btn-ghost btn-error"
+                      >
+                        {t("common.delete")()}
+                      </button>
+                    </Show>
+                    {task.status}
+                  </td>
+                </tr>
+              )}
             </For>
           </tbody>
         </table>
