@@ -451,15 +451,15 @@ export const aria2Store = {
     }
   },
 
-  async getGlobalOption(name: string) {
+  async getAllGlobalOptions() {
     if (!client) await this.connect();
     try {
-      return await client!.request<string | number | boolean>(
+      return await client!.request<Record<string, string>>(
         "aria2.getGlobalOption",
-        [name],
+        [],
       );
     } catch (e) {
-      logger.error(`Failed to get global option ${name}: ${e}`, LOG_CONTEXT);
+      logger.error(`Failed to get all global options: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },
