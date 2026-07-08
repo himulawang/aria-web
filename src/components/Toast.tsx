@@ -15,7 +15,10 @@ const Toast: Component = () => {
                   : "alert-info"
             } shadow-lg mb-2`}
           >
-            <span class="text-sm">{n.message}</span>
+            <div class="toast-content">
+              {n.title && <div class="toast-title font-bold">{n.title}</div>}
+              <span class="text-sm">{n.message}</span>
+            </div>
             <button
               class="btn btn-ghost btn-xs"
               onClick={() => notificationStore.remove(n.id)}
