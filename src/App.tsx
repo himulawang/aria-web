@@ -9,6 +9,7 @@ import TaskDetail from "./components/TaskDetail";
 import AddTask from "./components/AddTask";
 import { aria2Store } from "./store/aria2-store";
 import { aria2GlobalAvailableOptions } from "./config/aria2-available-options";
+import { keyboardService } from "./utils/keyboard-service";
 
 const App: Component = () => {
   const [view, setView] = createSignal<
@@ -21,6 +22,24 @@ const App: Component = () => {
   onMount(async () => {
     await aria2Store.init();
     await aria2Store.fetchTasks();
+    
+    keyboardService.init();
+    
+    window.addEventListener("aria-web:add-task", () => {
+      setView("downloads");
+    });
+    
+    window.addEventListener("aria-web:open-settings", () => {
+      setView("settings");
+    });
+    
+    window.addEventListener("aria-web:open-status", () => {
+      setView("status");
+    });
+    
+    window.addEventListener("aria-web:refresh-tasks", async () => {
+      await aria2Store.fetchTasks();
+    });
   });
 
   createEffect(() => {
