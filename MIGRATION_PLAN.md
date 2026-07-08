@@ -12,11 +12,11 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
 
 ## Task List (Sorted by Complexity: Low $\rightarrow$ High)
 
-- [ ] **Task 1: Notification System Enhancements**
+- [x] **Task 1: Notification System Enhancements**
   - Complexity: Low
   - Description: Migrate diverse notification types from AriaNg.
   - Verification: Trigger event -> check Toast content.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 2: Global Keyboard Shortcuts**
   - Complexity: Low
