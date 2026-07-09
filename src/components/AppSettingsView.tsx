@@ -60,8 +60,9 @@ const AppSettingsView: Component = () => {
                         updateSetting("language", e.currentTarget.value)
                       }
                     >
-                      <option value="en">{t("lang.en")()}</option>
-                      <option value="zh-cn">{t("lang.zh-cn")()}</option>
+                      <For each={SUPPORTED_LANGUAGES}>
+                        {(lang) => <option value={lang.code}>{t(lang.labelKey)()}</option>}
+                      </For>
                     </select>
                   </div>
                   <div class="form-control w-full">
@@ -234,7 +235,7 @@ const AppSettingsView: Component = () => {
           <div class="card bg-base-100 shadow-sm border border-base-300">
             <div class="card-body">
               <h3 class="card-title text-lg mb-4">
-                {t("app.settings.importExport")()}
+                  {t("app.settings.importExport")()}
               </h3>
               <div class="flex flex-col md:flex-row gap-4 items-end">
                 <div class="flex-1 flex gap-2">
@@ -250,6 +251,7 @@ const AppSettingsView: Component = () => {
                   </button>
                 </div>
                 <button class="btn btn-outline" onClick={handleExport}>
+                  {t("app.settings.export")()}
                   {t("app.settings.export")()}
                 </button>
               </div>

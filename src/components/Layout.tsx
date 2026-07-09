@@ -24,33 +24,34 @@ const Layout: Component<LayoutProps> = (props) => {
   const [isCollapsed, setIsCollapsed] = createSignal(false);
   const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
 
-  const navItems = [ { label: t("nav.debug")() || "Debug", view: "debug", position: "sidebar", icon: HiOutlineChartBar },
+  const navItems = [
+    { label: () => t("nav.debug")() || "Debug", view: "debug", position: "sidebar", icon: HiOutlineChartBar },
     {
-      label: t("nav.downloads"),
+      label: () => t("nav.downloads")() || "Downloads",
       view: "downloads",
       position: "sidebar",
       icon: HiOutlineArrowDownTray,
     },
     {
-      label: t("nav.rpcProfiles"),
+      label: () => t("nav.rpcProfiles")() || "RPC Profiles",
       view: "rpc-profiles",
       position: "sidebar",
       icon: HiOutlineIdentification,
     },
     {
-      label: t("nav.appSettings"),
+      label: () => t("nav.appSettings")() || "App Settings",
       view: "app-settings",
       position: "sidebar",
       icon: HiOutlineCog6Tooth,
     },
     {
-      label: t("nav.settings"),
+      label: () => t("nav.settings")() || "Settings",
       view: "settings",
       position: "sidebar",
       icon: HiOutlineCommandLine,
     },
     {
-      label: t("nav.status"),
+      label: () => t("nav.status")() || "Status",
       view: "status",
       position: "sidebar",
       icon: HiOutlineChartBar,
