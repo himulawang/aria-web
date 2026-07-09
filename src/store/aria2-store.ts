@@ -62,6 +62,15 @@ let pollingTimer: any = null;
 
 const LOG_CONTEXT = "aria2Store";
 
+  async executeCustomRpc(method: string, params: any[]) {
+    if (!client) await this.connect();
+    try {
+      return await client!.request(method, params);
+    } catch (e) {
+      logger.error(`Custom RPC ${method} failed: ${e}`, "aria2Store");
+      throw e;
+    }
+  },
 export const aria2Store = {
   getState: () => state,
 

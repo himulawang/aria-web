@@ -42,14 +42,20 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Change path -> `tellStatus` check.
   - Status: Completed
 
-- [ ] **Task 6: Global Settings Panel**
+- [x] **Task 6: Global Settings Panel**
   - Complexity: High
   - Description: Comprehensive UI for all `aria2.changeGlobalOption` settings.
   - Verification: Change setting -> `getGlobalOption` check.
   - Status: Completed
 
-- [ ] **Task 7: UI/UX Visual Overhaul**
+- [x] **Task 7: UI/UX Visual Overhaul**
   - Complexity: High
   - Description: Improve visual aesthetics using lightweight components.
   - Verification: Manual visual review.
   - Status: Completed
+
+- [ ] **Task 8: Debug View**
+  - Complexity: Medium
+  - Description: Migrate the Debug view from AriaNg, including RPC method execution and internal logging.
+  - Verification: Execute RPC method -> check response; trigger log -> check log list.
+  - Status: Pending

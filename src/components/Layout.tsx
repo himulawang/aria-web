@@ -24,7 +24,7 @@ const Layout: Component<LayoutProps> = (props) => {
   const [isCollapsed, setIsCollapsed] = createSignal(false);
   const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
 
-  const navItems = [
+  const navItems = [ { label: t("nav.debug")() || "Debug", view: "debug", position: "sidebar", icon: HiOutlineChartBar },
     {
       label: t("nav.downloads"),
       view: "downloads",

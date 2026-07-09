@@ -5,7 +5,7 @@ import {
 } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
-import { Dialog } from "./Dialog";
+import Dialog from "./Dialog";
 
 const TaskEditDialog: Component<{ gid: string; initialOptions: any }> = (props) => {
   const [dir, setDir] = createSignal(props.initialOptions?.dir || "");

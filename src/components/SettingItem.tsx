@@ -1,4 +1,4 @@
-import { type Component, Show } from "solid-js";
+import { type Component, Show, For } from "solid-js";
 import { notificationStore } from "../store/notification-store";
 import { aria2Store } from "../store";
 import { settingsHistory } from "../utils/settings-history";

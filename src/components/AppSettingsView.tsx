@@ -1,4 +1,5 @@
-import { type Component, createSignal } from "solid-js";
+import { SUPPORTED_LANGUAGES } from "../i18n/languages";
+import { type Component, createSignal, For } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 

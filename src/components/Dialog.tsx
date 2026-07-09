@@ -1,4 +1,4 @@
-import { Component, Show } from "solid-js";
+import { type Component, Show} from "solid-js";
 import { dialogStore } from "../store/dialog-store";
 
 const Dialog: Component = () => {

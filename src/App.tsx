@@ -7,13 +7,14 @@ import StatusView from "./components/StatusView";
 import TaskList from "./components/TaskList";
 import TaskDetail from "./components/TaskDetail";
 import AddTask from "./components/AddTask";
-import { aria2Store } from "./store/aria2-store";
+import DebugView from "./components/DebugView";
+import { aria2Store } from "./store";
 import { aria2GlobalAvailableOptions } from "./config/aria2-available-options";
 import { keyboardService } from "./utils/keyboard-service";
 
 const App: Component = () => {
   const [view, setView] = createSignal<
-    "downloads" | "settings" | "status" | "app-settings" | "rpc-profiles"
+    "downloads" | "settings" | "status" | "app-settings" | "rpc-profiles" | "debug"
   >("downloads");
   const [activeSubTab, setActiveSubTab] = createSignal<string | null>(
     Object.keys(aria2GlobalAvailableOptions)[0],
@@ -74,6 +75,8 @@ const App: Component = () => {
           <AppSettingsView />
         ) : view() === "status" ? (
           <StatusView />
+        ) : view() === "debug" ? (
+          <DebugView />
         ) : (
           <div class="h-full overflow-y-auto">
             <TaskList />
