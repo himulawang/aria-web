@@ -25,7 +25,6 @@ const Layout: Component<LayoutProps> = (props) => {
   const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
 
   const navItems = [
-    { label: () => t("nav.debug")() || "Debug", view: "debug", position: "sidebar", icon: HiOutlineChartBar },
     {
       label: () => t("nav.downloads")() || "Downloads",
       view: "downloads",
@@ -56,6 +55,7 @@ const Layout: Component<LayoutProps> = (props) => {
       position: "sidebar",
       icon: HiOutlineChartBar,
     },
+    { label: () => t("nav.debug")() || "Debug", view: "debug", position: "sidebar", icon: HiOutlineChartBar },
   ];
 
   return (

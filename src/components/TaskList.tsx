@@ -330,9 +330,9 @@ const TaskList: Component = () => {
                   onClick={toggleAll}
                 />
               </th>
-              <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("name")}>{t("task-list.title")()} {sortKey() === "name" <th>{t("task-list.title")()}</th><th>{t("task-list.title")()}</th> (sortDirection() === "asc" ? "↑" : "↓")}</th>
-              <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("progress")}>{t("task-detail.progress")()} {sortKey() === "progress" <th>{t("task-detail.progress")()}</th><th>{t("task-detail.progress")()}</th> (sortDirection() === "asc" ? "↑" : "↓")}</th>
-              <th class="text-right cursor-pointer hover:text-primary" onClick={() => toggleSort("status")}>{t("nav.status")()} {sortKey() === "status" <th class="text-right">{t("nav.status")()}</th><th class="text-right">{t("nav.status")()}</th> (sortDirection() === "asc" ? "↑" : "↓")}</th>
+              <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("name")}>{t("task-list.title")()} {sortKey() === "name" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
+              <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("progress")}>{t("task-detail.progress")()} {sortKey() === "progress" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
+              <th class="text-right cursor-pointer hover:text-primary" onClick={() => toggleSort("status")}>{t("nav.status")()} {sortKey() === "status" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
             </tr>
           </thead>
           <tbody>

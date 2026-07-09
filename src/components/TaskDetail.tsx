@@ -8,6 +8,7 @@ import {
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import { formatSize, formatSpeed } from "../utils/format";
+import { parsePeerId, calculatePeerProgress } from "../utils/peer";
 import TaskEditDialog from "./TaskEditDialog";
 
 const TaskDetail: Component = () => {
@@ -182,8 +183,10 @@ const TaskDetail: Component = () => {
                     <tr>
                       <th class="text-xs">IP</th>
                       <th class="text-xs">Port</th>
+                      <th class="text-xs">Client</th>
                       <th class="text-xs">DL</th>
                       <th class="text-xs">UL</th>
+                      <th class="text-xs">Progress</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -192,22 +195,22 @@ const TaskDetail: Component = () => {
                         <tr>
                           <td class="text-xs font-mono">{peer.ip}</td>
                           <td class="text-xs">{peer.port}</td>
+                          <td class="text-xs">{parsePeerId(peer.peerId)}</td>
                           <td class="text-xs">
                             {formatSpeed(Number(peer.downloadSpeed))}
                           </td>
                           <td class="text-xs">
                             {formatSpeed(Number(peer.uploadSpeed))}
                           </td>
+                          <td class="text-xs">
+                            {calculatePeerProgress(peer.bitfield, state.selectedTaskDetail?.numPieces)}
+                            %
+                          </td>
                         </tr>
                       )}
                     </For>
                   </tbody>
                 </table>
-                <Show when={peers().length === 0}>
-                  <div class="p-4 text-center text-sm opacity-50">
-                    {t("task-detail.peers.empty")()}
-                  </div>
-                </Show>
               </div>
             </div>
           </Show>

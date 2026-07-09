@@ -16,6 +16,6 @@ export const titleService = {
     const upSpeed = formatSpeed(stat.uploadSpeed);
     
     // Matching AriaNg behavior: (D: 1.2 MB/s, U: 50 KB/s) - aria-web
-    document.title = \`(D: \${downSpeed}, U: \${upSpeed}) - \${appName}\`;
+    document.title = `(D: ${downSpeed}, U: ${upSpeed}) - ${appName}`;
   }
 };
