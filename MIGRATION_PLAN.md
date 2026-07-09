@@ -66,11 +66,11 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Connect and start downloading -> confirm browser tab title changes in real-time.
   - Status: Completed
 
-- [ ] **Task 10: Task List Search & Dynamic Filtering**
+- [x] **Task 10: Task List Search & Dynamic Filtering**
   - Complexity: Low
   - Description: Add a search input in `TaskList.tsx` to dynamically filter tasks by filename.
   - Verification: Type filename fragment -> list filters instantly.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 11: Task List Sorting Control**
   - Complexity: Medium

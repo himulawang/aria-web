@@ -117,6 +117,8 @@ const TaskList: Component = () => {
   );
   const [isModalOpen, setIsModalOpen] = createSignal(false);
   const [searchQuery, setSearchQuery] = createSignal("");
+  const [sortKey, setSortKey] = createSignal<string | null>(null);
+  const [sortDirection, setSortDirection] = createSignal<"asc" | "desc">("asc");
   const [filter, setFilter] = createSignal<
     "all" | "active" | "waiting" | "stopped"
   >("active");
@@ -129,6 +131,15 @@ const TaskList: Component = () => {
   };
 
   const toggleAll = () => {
+
+  const toggleSort = (key: string) => {
+    if (sortKey() === key) {
+      setSortDirection(sortDirection() === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  };
     if (selectedTasks().size === filteredTasks().length) {
       setSelectedTasks(new Set());
     } else {
@@ -173,6 +184,41 @@ const TaskList: Component = () => {
       });
     }
 
+    // Sorting Logic
+    const key = sortKey();
+    const dir = sortDirection();
+    if (key) {
+      result = [...result].sort((a, b) => {
+        let valA: any, valB: any;
+        switch (key) {
+          case "name":
+            valA = a.files[0]?.path?.split("/").pop() || "";
+            valB = b.files[0]?.path?.split("/").pop() || "";
+            break;
+          case "size":
+            valA = a.totalLength || 0;
+            valB = b.totalLength || 0;
+            break;
+          case "progress":
+            valA = a.totalLength > 0 ? (a.completedLength / a.totalLength) : 0;
+            valB = b.totalLength > 0 ? (b.completedLength / b.totalLength) : 0;
+            break;
+          case "speed":
+            valA = Number(a.downloadSpeed) || 0;
+            valB = Number(b.downloadSpeed) || 0;
+            break;
+          case "remain":
+            valA = Number(a.remainingTime) || Infinity;
+            valB = Number(b.remainingTime) || Infinity;
+            break;
+          default:
+            return 0;
+        }
+        if (valA < valB) return dir === "asc" ? -1 : 1;
+        if (valA > valB) return dir === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
     return result;
   };
 
@@ -284,9 +330,9 @@ const TaskList: Component = () => {
                   onClick={toggleAll}
                 />
               </th>
-              <th>{t("task-list.title")()}</th>
-              <th>{t("task-detail.progress")()}</th>
-              <th class="text-right">{t("nav.status")()}</th>
+              <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("name")}>{t("task-list.title")()} {sortKey() === "name" <th>{t("task-list.title")()}</th><th>{t("task-list.title")()}</th> (sortDirection() === "asc" ? "↑" : "↓")}</th>
+              <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("progress")}>{t("task-detail.progress")()} {sortKey() === "progress" <th>{t("task-detail.progress")()}</th><th>{t("task-detail.progress")()}</th> (sortDirection() === "asc" ? "↑" : "↓")}</th>
+              <th class="text-right cursor-pointer hover:text-primary" onClick={() => toggleSort("status")}>{t("nav.status")()} {sortKey() === "status" <th class="text-right">{t("nav.status")()}</th><th class="text-right">{t("nav.status")()}</th> (sortDirection() === "asc" ? "↑" : "↓")}</th>
             </tr>
           </thead>
           <tbody>
