@@ -6,6 +6,15 @@ const translations: Record<string, () => Promise<{ default: TranslationMap }>> =
   {
     en: () => import("./langs/en.json"),
     "zh-cn": () => import("./langs/zh-cn.json"),
+    "zh-tw": () => import("./langs/zh-tw.json"),
+    "es": () => import("./langs/es.json"),
+    "fr-FR": () => import("./langs/fr-FR.json"),
+    "de-DE": () => import("./langs/de-DE.json"),
+    "it-IT": () => import("./langs/it-IT.json"),
+    "ja-JP": () => import("./langs/ja-JP.json"),
+    "ru-RU": () => import("./langs/ru-RU.json"),
+    "pl-PL": () => import("./langs/pl-PL.json"),
+    "cz-CZ": () => import("./langs/cz-CZ.json"),
   };
 
 const [currentTranslations, setCurrentTranslations] =
