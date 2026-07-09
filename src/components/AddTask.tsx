@@ -16,6 +16,7 @@ const AddTask: Component<AddTaskProps> = (props) => {
     type: "torrent" | "metalink";
   } | null>(null);
   const [options, setOptions] = createSignal<Record<string, any>>({});
+  const [showAdvanced, setShowAdvanced] = createSignal(false);
 
   const handleFileChange = (e: Event) => {
     const input = e.target as HTMLInputElement;
@@ -35,6 +36,10 @@ const AddTask: Component<AddTaskProps> = (props) => {
       };
       reader.readAsDataURL(fileObj);
     }
+  };
+
+  const updateOption = (key: string, value: string) => {
+    setOptions((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleStart = async (pause: boolean) => {
@@ -93,7 +98,7 @@ const AddTask: Component<AddTaskProps> = (props) => {
           <div class="flex flex-col gap-2">
             <input
               type="file"
-              class="file-input file-input-bordered w-full"
+              class="textarea textarea-bordered w-full"
               onChange={handleFileChange}
               accept=".torrent,.metalink,.meta4"
             />
@@ -102,6 +107,74 @@ const AddTask: Component<AddTaskProps> = (props) => {
                 {file()?.name} {file()?.type === "metalink" ? " (Metalink)" : " (Torrent)"}
               </div>
             )}
+          </div>
+        </Show>
+      </div>
+
+      <div class="p-2 bg-base-200 rounded-lg flex flex-col gap-2">
+        <button 
+          class="btn btn-ghost btn-sm justify-start gap-2" 
+          onClick={() => setShowAdvanced(!showAdvanced())}
+        >
+          <span class={`transition-transform ${showAdvanced() ? "rotate-90" : ""}`}>▶</span>
+          {t("new-task.advanced-settings")()}
+        </button>
+        <Show when={showAdvanced()}>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">{t("new-task.option.dir")()}</span>
+              </label>
+              <input 
+                type="text" 
+                class="input input-bordered input-sm" 
+                placeholder="/home/aria2/downloads"
+                onInput={(e) => updateOption("dir", e.currentTarget.value)}
+              />
+            </div>
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">{t("new-task.option.out")()}</span>
+              </label>
+              <input 
+                type="text" 
+                class="input input-bordered input-sm" 
+                placeholder="filename"
+                onInput={(e) => updateOption("out", e.currentTarget.value)}
+              />
+            </div>
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">{t("new-task.option.split")()}</span>
+              </label>
+              <input 
+                type="number" 
+                class="input input-bordered input-sm" 
+                placeholder="5"
+                onInput={(e) => updateOption("split", e.currentTarget.value)}
+              />
+            </div>
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">{t("new-task.option.user-agent")()}</span>
+              </label>
+              <input 
+                type="text" 
+                class="input input-bordered input-sm" 
+                placeholder="aria2/1.36.0"
+                onInput={(e) => updateOption("user-agent", e.currentTarget.value)}
+              />
+            </div>
+            <div class="form-control col-span-full">
+              <label class="label">
+                <span class="label-text">{t("new-task.option.header")()}</span>
+              </label>
+              <textarea 
+                class="textarea textarea-bordered" 
+                placeholder="Cookie: ...\nUser-Agent: ..."
+                onInput={(e) => updateOption("header", e.currentTarget.value)}
+              />
+            </div>
           </div>
         </Show>
       </div>

@@ -100,10 +100,10 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Complexity: Medium
   - Description: Add a "Show Command / API" action in `TaskDetail.tsx` opening a dialog that shows equivalent `aria2c` command-line command or raw JSON-RPC payload, matching AriaNg's export dialog.
   - Verification: Click action -> see copyable CLI command or JSON payload with all custom task headers/settings.
-  - Status: Pending
+  - Status: Completed
 
-- [ ] **Task 16: Rich Peer Metadata & Client Resolution**
+- [x] **Task 16: Rich Peer Metadata & Client Resolution**
   - Complexity: Low
   - Description: Enrich the `peers` tab in `TaskDetail.tsx` with client name resolution (User-Agent) and individual peer download progress.
   - Verification: Download BT task -> view peers tab -> see peer client software name and download progress.
-  - Status: Pending
+  - Status: Completed
