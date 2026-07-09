@@ -18,38 +18,38 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Trigger event -> check Toast content.
   - Status: Completed
 
-- [ ] **Task 2: Global Keyboard Shortcuts**
+- [x] **Task 2: Global Keyboard Shortcuts**
   - Complexity: Low
   - Description: Implement `ariaNgKeyboardService` logic for global hotkeys.
   - Verification: KeyDown event -> trigger Action.
-  - Status: Pending
+  - Status: Completed
 
-- [ ] **Task 3: i18n Multi-language Support**
+- [x] **Task 3: i18n Multi-language Support**
   - Complexity: Medium
   - Description: Implement language loading and switching mechanism.
   - Verification: Switch lang -> check UI text.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 4: Magnet Link & File Import**
   - Complexity: Medium
   - Description: Enhance `addTask` to handle Magnet and local file imports.
   - Verification: Input Magnet -> check RPC params.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 5: Task Detail Editing UI**
   - Complexity: Medium
   - Description: Implement UI for changing `dir`, `out`, `split` via `aria2.changeOption`.
   - Verification: Change path -> `tellStatus` check.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 6: Global Settings Panel**
   - Complexity: High
   - Description: Comprehensive UI for all `aria2.changeGlobalOption` settings.
   - Verification: Change setting -> `getGlobalOption` check.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 7: UI/UX Visual Overhaul**
   - Complexity: High
   - Description: Improve visual aesthetics using lightweight components.
   - Verification: Manual visual review.
-  - Status: Pending
+  - Status: Completed

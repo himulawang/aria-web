@@ -1,36 +1,33 @@
 import { createMemo, createSignal, createEffect } from "solid-js";
 import { aria2Store } from "../store";
+import en from "./langs/en.json";
+import zhCn from "./langs/zh-cn.json";
 
 type TranslationMap = Record<string, string>;
-const translations: Record<string, () => Promise<{ default: TranslationMap }>> =
-  {
-    en: () => import("./langs/en.json"),
-    "zh-cn": () => import("./langs/zh-cn.json"),
-    "zh-tw": () => import("./langs/zh-tw.json"),
-    "es": () => import("./langs/es.json"),
-    "fr-FR": () => import("./langs/fr-FR.json"),
-    "de-DE": () => import("./langs/de-DE.json"),
-    "it-IT": () => import("./langs/it-IT.json"),
-    "ja-JP": () => import("./langs/ja-JP.json"),
-    "ru-RU": () => import("./langs/ru-RU.json"),
-    "pl-PL": () => import("./langs/pl-PL.json"),
-    "cz-CZ": () => import("./langs/cz-CZ.json"),
-  };
+const translations: Record<string, any> = {
+  en,
+  "zh-cn": zhCn,
+};
 
 const [currentTranslations, setCurrentTranslations] =
-  createSignal<TranslationMap>({});
+  createSignal<TranslationMap>(en); // Default to English synchronously
 
 async function loadTranslations(lang: string) {
-  const loader = translations[lang] || translations["en"];
+  if (translations[lang]) {
+    setCurrentTranslations(translations[lang]);
+    return;
+  }
+  
   try {
-    const module = await loader();
+    // For other languages, we still use dynamic import to keep bundle size small
+    const module = await import(`./langs/${lang}.json`);
     setCurrentTranslations(module.default);
   } catch (e) {
     console.error(`Failed to load translations for language: ${lang}`, e);
+    setCurrentTranslations(en);
   }
 }
 
-// Create a reactive effect to load translations when the language changes in the store
 createEffect(() => {
   const lang = aria2Store.getState().appSettings.language || "en";
   loadTranslations(lang);

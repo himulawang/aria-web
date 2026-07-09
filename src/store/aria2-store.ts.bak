@@ -96,7 +96,9 @@ export const aria2Store = {
 
     try {
       await this.connect();
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.warn(
         "Auto-connect failed. User may need to connect manually.",
         LOG_CONTEXT,
@@ -178,7 +180,9 @@ export const aria2Store = {
         await this.setCurrentProfile(data.currentProfileId);
       }
       notificationStore.add("Settings imported successfully", "success");
-    } catch (e) {
+    }
+  },
+    catch (e) {
       notificationStore.add("Failed to import settings: Invalid JSON", "error");
       throw e;
     }
@@ -229,7 +233,9 @@ export const aria2Store = {
 
       this.startPolling();
       this.setupEventListeners();
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Connection failed: ${e}`, LOG_CONTEXT);
       setState("connectionStatus", "error");
       throw e;
@@ -253,7 +259,9 @@ export const aria2Store = {
         const activeGids = new Set(active.map((t) => t.gid));
         return [...active, ...prev.filter((t) => !activeGids.has(t.gid))];
       });
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to fetch active tasks: ${e}`, LOG_CONTEXT);
     }
   },
@@ -272,7 +280,9 @@ export const aria2Store = {
       );
 
       setState("tasks", allTasks);
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to fetch tasks: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -284,7 +294,9 @@ export const aria2Store = {
       const stat = await client!.request<GlobalStat>("aria2.getGlobalStat");
       logger.debug("Fetched global stat", LOG_CONTEXT);
       setState("globalStat", stat);
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to fetch global stat: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -314,7 +326,9 @@ export const aria2Store = {
     try {
       await client!.request("aria2.addUri", [uris, options]);
       await this.fetchTasks();
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to add task: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -325,18 +339,20 @@ export const aria2Store = {
     try {
       await client!.request("aria2.addTorrent", [base64Content, [], options]);
       await this.fetchTasks();
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to add torrent task: ${e}`, LOG_CONTEXT);
       throw e;
     }
-  },
-
   async addMetalinkTask(base64Content: string, options: any = {}) {
     if (!client) await this.connect();
     try {
       await client!.request("aria2.addMetalink", [base64Content, options]);
       await this.fetchTasks();
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to add metalink task: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -347,7 +363,9 @@ export const aria2Store = {
     try {
       await client!.request("aria2.pause", [gid]);
       await this.fetchTasks();
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to pause task: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -358,7 +376,9 @@ export const aria2Store = {
     try {
       await client!.request("aria2.unpause", [gid]);
       await this.fetchTasks();
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to resume task: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -379,7 +399,9 @@ export const aria2Store = {
       // Local UI update
       setState("tasks", (tasks) => tasks.filter((t) => t.gid !== gid));
       this.fetchGlobalStat().catch(() => {});
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to remove task ${gid}: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -392,7 +414,9 @@ export const aria2Store = {
         "aria2.getOption",
         [name],
       );
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to get option ${name}: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -402,7 +426,9 @@ export const aria2Store = {
     if (!client) await this.connect();
     try {
       return await client!.request<any[]>("aria2.getPeers", [gid]);
-    } catch (e) {
+    }
+  },
+    catch (e) {
       return [];
     }
   },
@@ -411,7 +437,9 @@ export const aria2Store = {
     if (!client) await this.connect();
     try {
       return await client!.request<any[]>("aria2.getServers", [gid]);
-    } catch (e) {
+    }
+  },
+    catch (e) {
       return [];
     }
   },
@@ -426,7 +454,9 @@ export const aria2Store = {
       // 成功移除后更新任务列表
       await this.fetchTasks();
       return result;
-    } catch (e) {
+    }
+  },
+    catch (e) {
       return "Error";
     }
   },
@@ -447,7 +477,9 @@ export const aria2Store = {
         addUris,
         position,
       ]);
-    } catch (e) {
+    }
+  },
+    catch (e) {
       return [0, 0];
     }
   },
@@ -456,7 +488,9 @@ export const aria2Store = {
     if (!client) await this.connect();
     try {
       await client!.request("aria2.changeOption", [name, value]);
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to change option ${name}: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -469,7 +503,9 @@ export const aria2Store = {
         "aria2.getGlobalOption",
         [],
       );
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to get all global options: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -481,7 +517,9 @@ export const aria2Store = {
       await client!.request("aria2.changeGlobalOption", [
         { [name]: String(value) },
       ]);
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to change global option ${name}: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -492,15 +530,17 @@ export const aria2Store = {
     try {
       if (gid) {
         await client!.request("aria2.changeOption", [
-        gid,
-        { "max-download-limit": String(limit) },
+          gid,
+          { "max-download-limit": String(limit) },
         ]);
       } else {
         await client!.request("aria2.changeGlobalOption", [
-        { "max-overall-download-limit": String(limit) },
+          { "max-overall-download-limit": String(limit) },
         ]);
       }
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to limit download speed: ${e}`, LOG_CONTEXT);
       throw e;
     }
@@ -511,46 +551,207 @@ export const aria2Store = {
     try {
       if (gid) {
         await client!.request("aria2.changeOption", [
-        gid,
-        { "max-upload-limit": String(limit) },
+          gid,
+          { "max-upload-limit": String(limit) },
         ]);
       } else {
         await client!.request("aria2.changeGlobalOption", [
-        { "max-overall-upload-limit": String(limit) },
+          { "max-overall-upload-limit": String(limit) },
         ]);
       }
-    } catch (e) {
+    }
+  },
+    catch (e) {
       logger.error(`Failed to limit upload speed: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },
 
-  async stopPolling() {
+  async saveSession() {
+    if (!client) await this.connect();
+    try {
+      await client!.request("aria2.saveSession");
+    }
+  },
+    catch (e) {
+      logger.error(`Failed to save session: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async getServerInfo() {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<any>("aria2.getVersion", []);
+    }
+  },
+    catch (e) {
+      logger.error(`Failed to fetch server info: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async shutdown() {
+    if (!client) await this.connect();
+    try {
+      await client!.request("aria2.shutdown", []);
+    }
+  },
+    catch (e) {
+      logger.error(`Failed to shutdown: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  setSelectedTask(gid: string | null) {
+    setState("selectedTaskId", gid);
+    if (gid) {
+      this.fetchTaskDetail(gid).catch((err) =>
+        logger.error(`Error in setSelectedTask: ${err}`, LOG_CONTEXT),
+      );
+    } else {
+      setState("selectedTaskDetail", null);
+    }
+  },
+
+  async setAppSettings(settings: Record<string, any>) {
+    const updated = { ...state.appSettings, ...settings };
+    setState("appSettings", updated);
+    StorageService.set("ariang_settings", updated);
+  },
+
+  async requestSafe<T>(method: string, params: any[] = []): Promise<T> {
+    if (state.connectionStatus === "connecting") {
+      await new Promise<void>((resolve) => {
+        const check = setInterval(() => {
+          if (state.connectionStatus === "connected") {
+            clearInterval(check);
+            resolve();
+          }
+        }, 100);
+      });
+    }
+
+    if (state.connectionStatus !== "connected") {
+      await this.connect();
+    }
+
+    if (!client) throw new Error("Aria2 client not initialized");
+    return client.request<T>(method, params);
+  },
+
+  startPolling() {
+    if (pollingTimer) return;
+    pollingTimer = setInterval(async () => {
+      if (state.connectionStatus !== "connected" || !client) return;
+      try {
+        const calls = [
+          { method: "aria2.tellActive", params: [] },
+          { method: "aria2.getGlobalStat", params: [] },
+        ];
+        const results = await client!.multicall<any[]>(calls);
+
+        const rawActive = results[0];
+        const active = Array.isArray(rawActive) && Array.isArray(rawActive[0])
+          ? rawActive[0]
+          : Array.isArray(rawActive) ? rawActive : [];
+
+        const hasActiveTasks = active.length > 0;
+        if (hasActiveTasks !== state.isDownloading) {
+          setState("isDownloading", hasActiveTasks);
+          logger.info(`Download state changed to: ${hasActiveTasks ? "Active" : "Idle"}`, LOG_CONTEXT);
+        }
+      }
+  },
+    catch (e) {
+        logger.warn(`Polling error: ${e}`, LOG_CONTEXT);
+      }
+    }, 3000);
+  },
+
+  stopPolling() {
     if (pollingTimer) {
       clearInterval(pollingTimer);
       pollingTimer = null;
     }
   },
 
-  async startPolling() {
-    pollingTimer = setInterval(async () => {
-      try {
-        await this.fetchGlobalStat();
-        await this.fetchActiveTasks();
-      } catch (e) {
-        logger.error(`Polling error: ${e}`, LOG_CONTEXT);
-      }
-    }, 5000);
-  },
+  setupEventListeners() {
+    if (!client) return;
 
-  async setupEventListeners() {
-    client?.on("aria2.onDownloadComplete", (gid) => {
-      notificationStore.add(`Task ${gid} completed`, "success");
-      this.fetchTasks().catch(() => {});
+    client.on("aria2.onDownloadStart", (params: any[]) => {
+      const gid = params[0].gid;
+      logger.debug(`Task started: ${gid}`, LOG_CONTEXT);
+      setState("isDownloading", true);
+      this.fetchTaskDetail(gid).catch((err) =>
+        logger.error(`Error in onDownloadStart: ${err}`, LOG_CONTEXT),
+      );
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(
+          `Error fetching global stat on start: ${err}`,
+          LOG_CONTEXT,
+        ),
+      );
+      notificationStore.add(`Task started`, `Task ${gid} has started downloading`, "info");
+      notificationStore.notifyViaBrowser(`Aria2: Task Started`, `Task ${gid} has started downloading`);
     });
-    client?.on("aria2.onDownloadError", (gid) => {
-      notificationStore.add(`Task ${gid} failed`, "error");
-      this.fetchTasks().catch(() => {});
+
+    client.on("aria2.onDownloadPause", (params: any[]) => {
+      const gid = params[0].gid;
+      logger.debug(`Task paused: ${gid}`, LOG_CONTEXT);
+      setState("tasks", (t) => t.gid === gid, { status: "paused" });
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(
+          `Error fetching global stat on pause: ${err}`,
+          LOG_CONTEXT,
+        ),
+      );
+      notificationStore.add(`Task paused`, `Task ${gid} is now paused`, "info");
+    });
+
+    client.on("aria2.onDownloadStop", (params: any[]) => {
+      const gid = params[0].gid;
+      logger.debug(`Task stopped: ${gid}`, LOG_CONTEXT);
+      setState("tasks", (prev) => prev.filter((t) => t.gid !== gid));
+      notificationStore.add(`Task stopped`, `Task ${gid} has been stopped`, "info");
+      notificationStore.notifyViaBrowser(`Aria2: Task Stopped`, `Task ${gid} has been stopped`);
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(`Error fetching global stat on stop: ${err}`, LOG_CONTEXT),
+      );
+    });
+
+    client.on("aria2.onDownloadComplete", (params: any[]) => {
+      const gid = params[0].gid;
+      logger.debug(`Task completed: ${gid}`, LOG_CONTEXT);
+      setState("tasks", (t) => t.gid === gid, { status: "complete" });
+      setTimeout(() => {
+        this.fetchTaskDetail(gid).catch((err) =>
+          logger.warn(`Deferred fetch failed for ${gid}: ${err}`, LOG_CONTEXT),
+        );
+        this.fetchTasks();
+      }, 500);
+      notificationStore.add(`Download Completed`, `Task ${gid} completed successfully`, "success");
+      notificationStore.notifyViaBrowser(`Aria2: Download Complete`, `Task ${gid} completed successfully`);
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(
+          `Error fetching global stat on complete: ${err}`,
+          LOG_CONTEXT,
+        ),
+      );
+    });
+
+    client.on("aria2.onDownloadError", (params: any[]) => {
+      const gid = params[0].gid;
+      logger.debug(`Task error: ${gid}`, LOG_CONTEXT);
+      setState("tasks", (t) => t.gid === gid, { status: "error" });
+      notificationStore.add(`Download Error`, `Task ${gid} encountered an error`, "error");
+      notificationStore.notifyViaBrowser(`Aria2: Download Error`, `Task ${gid} encountered an error`);
+      this.fetchGlobalStat().catch((err) =>
+        logger.error(
+          `Error fetching global stat on error: ${err}`,
+          LOG_CONTEXT,
+        ),
+      );
     });
   },
-}
+};
