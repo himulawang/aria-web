@@ -72,11 +72,11 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Type filename fragment -> list filters instantly.
   - Status: Completed
 
-- [ ] **Task 11: Task List Sorting Control**
+- [x] **Task 11: Task List Sorting Control**
   - Complexity: Medium
   - Description: Support sorting the task list by filename, total size, progress, speed, or remaining time.
   - Verification: Choose sorting parameter -> verify order updates accordingly.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 12: Create Task with Custom Parameters UI**
   - Complexity: Medium

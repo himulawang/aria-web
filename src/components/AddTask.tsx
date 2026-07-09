@@ -13,18 +13,27 @@ const AddTask: Component<AddTaskProps> = (props) => {
   const [file, setFile] = createSignal<{
     name: string;
     content: string;
+    type: "torrent" | "metalink";
   } | null>(null);
   const [options, setOptions] = createSignal<Record<string, any>>({});
 
   const handleFileChange = (e: Event) => {
     const input = e.target as HTMLInputElement;
     if (input.files && input.files[0]) {
+      const fileObj = input.files[0];
+      const fileName = fileObj.name.toLowerCase();
+      let type: "torrent" | "metalink" = "torrent";
+
+      if (fileName.endsWith(".metalink") || fileName.endsWith(".meta4")) {
+        type = "metalink";
+      }
+
       const reader = new FileReader();
       reader.onload = (ev) => {
         const base64 = (ev.target?.result as string).split(",")[1];
-        setFile({ name: input.files![0].name, content: base64 });
+        setFile({ name: fileObj.name, content: base64, type });
       };
-      reader.readAsDataURL(input.files[0]);
+      reader.readAsDataURL(fileObj);
     }
   };
 
@@ -38,7 +47,11 @@ const AddTask: Component<AddTaskProps> = (props) => {
           .filter((u) => u.trim() !== "");
         await aria2Store.addTask(urlsArray, finalOptions);
       } else if (tab() === "file" && file()) {
-        await aria2Store.addTorrentTask(file()!.content, finalOptions);
+        if (file()!.type === "torrent") {
+          await aria2Store.addTorrentTask(file()!.content, finalOptions);
+        } else {
+          await aria2Store.addMetalinkTask(file()!.content, finalOptions);
+        }
       }
       notificationStore.add(t("new-task.add-success")(), "success");
       props.onClose();
@@ -82,9 +95,12 @@ const AddTask: Component<AddTaskProps> = (props) => {
               type="file"
               class="file-input file-input-bordered w-full"
               onChange={handleFileChange}
+              accept=".torrent,.metalink,.meta4"
             />
             {file() && (
-              <div class="text-sm badge badge-ghost">{file()?.name}</div>
+              <div class="text-sm badge badge-ghost">
+                {file()?.name} {file()?.type === "metalink" ? " (Metalink)" : " (Torrent)"}
+              </div>
             )}
           </div>
         </Show>
