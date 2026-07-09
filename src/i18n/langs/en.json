@@ -37,7 +37,7 @@
   "connection-status.disconnected": "Disconnected",
   "connection-status.error": "Connection Error",
   "lang.en": "English",
-  "lang.zh-cn": "简体中文",
+  "lang.zh-cn": "\u7b80\u4f53\u4e2d\u6587",
   "nav.appSettings": "AriaWeb Settings",
   "nav.downloads": "Downloads",
   "nav.new": "New",
@@ -113,5 +113,6 @@
   "task-detail.tabs.peers": "Peers",
   "task-detail.tabs.files": "Files",
   "task-detail.peers.empty": "No peers found",
-  "task-detail.peers.loading": "Loading peers..."
+  "task-detail.peers.loading": "Loading peers...",
+  "task-list.search": "Search tasks..."
 }

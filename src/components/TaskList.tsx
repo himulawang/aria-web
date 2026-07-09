@@ -116,6 +116,7 @@ const TaskList: Component = () => {
     new Set(),
   );
   const [isModalOpen, setIsModalOpen] = createSignal(false);
+  const [searchQuery, setSearchQuery] = createSignal("");
   const [filter, setFilter] = createSignal<
     "all" | "active" | "waiting" | "stopped"
   >("active");
@@ -149,18 +150,30 @@ const TaskList: Component = () => {
         state.tasks.find((t) => t.gid === gid)?.status !== "error",
     );
 
+  
   const filteredTasks = () => {
     const tasks = state.tasks;
-    if (filter() === "all") return tasks;
-    if (filter() === "active")
-      return tasks.filter((t) => t.status === "active");
-    if (filter() === "waiting")
-      return tasks.filter((t) => t.status === "paused");
-    if (filter() === "stopped")
-      return tasks.filter(
-        (t) => t.status === "complete" || t.status === "error",
-      );
-    return tasks;
+    let result = tasks;
+
+    if (filter() === "active") {
+      result = tasks.filter((t) => t.status === "active");
+    } else if (filter() === "waiting") {
+      result = tasks.filter((t) => t.status === "paused");
+    } else if (filter() === "stopped") {
+      result = tasks.filter((t) => t.status === "complete" || t.status === "error");
+    } else if (filter() === "all") {
+      result = tasks;
+    }
+
+    const query = searchQuery().toLowerCase();
+    if (query) {
+      result = result.filter((t) => {
+        const name = t.files[0]?.path?.split("/").pop() || "";
+        return name.toLowerCase().includes(query);
+      });
+    }
+
+    return result;
   };
 
   return (
@@ -180,9 +193,20 @@ const TaskList: Component = () => {
         </Portal>
       </Show>
 
-      <div class="flex items-center justify-between">
-        <h3 class="text-xl font-bold">{t("task-list.title")()}</h3>
+      
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <h3 class="text-xl font-bold">{t("task-list.title")()}</h3>
+          <input
+            type="text"
+            placeholder={t("task-list.search")()}
+            class="input input-sm input-bordered max-w-xs"
+            value={searchQuery()}
+            onInput={(e) => setSearchQuery(e.currentTarget.value)}
+          />
+        </div>
         <div class="flex items-center gap-1">
+
           <button
             onClick={() => setIsModalOpen(true)}
             class="btn btn-sm btn-ghost btn-square"

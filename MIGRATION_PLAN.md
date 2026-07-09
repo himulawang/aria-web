@@ -60,11 +60,11 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Execute RPC method -> check response; trigger log -> check log list.
   - Status: Completed
 
-- [ ] **Task 9: Dynamic Document Title with Speed Display**
+- [x] **Task 9: Dynamic Document Title with Speed Display**
   - Complexity: Low
   - Description: Dynamically update the browser tab title (`document.title`) with overall download/upload speeds (e.g. `(D: 1.2 MB/s, U: 50 KB/s) - aria-web`), matching `ariaNgTitleService.js` behavior.
   - Verification: Connect and start downloading -> confirm browser tab title changes in real-time.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 10: Task List Search & Dynamic Filtering**
   - Complexity: Low
