@@ -113,5 +113,6 @@
   "task-detail.tabs.peers": "连接状态",
   "task-detail.tabs.files": "文件列表",
   "task-detail.peers.empty": "No peers found",
-  "task-detail.peers.loading": "Loading peers..."
+  "task-detail.peers.loading": "Loading peers...",
+  "task-detail.show-api": "显示命令 / API"
 }

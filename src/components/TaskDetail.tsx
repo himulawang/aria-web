@@ -10,6 +10,7 @@ import { t } from "../i18n";
 import { formatSize, formatSpeed } from "../utils/format";
 import { parsePeerId, calculatePeerProgress } from "../utils/peer";
 import TaskEditDialog from "./TaskEditDialog";
+import ExportCommandDialog from "./ExportCommandDialog";
 
 const TaskDetail: Component = () => {
   const state = aria2Store.getState();
@@ -17,6 +18,7 @@ const TaskDetail: Component = () => {
   const [peers, setPeers] = createSignal<any[]>([]);
   const [isActionLoading, setIsActionLoading] = createSignal(false);
   const [isEditing, setIsEditing] = createSignal(false);
+  const [isExporting, setIsExporting] = createSignal(false);
   const [selectedIndices, setSelectedIndices] = createSignal<Set<number>>(new Set());
 
   // Fetch peers when tab changes to 'peers'
@@ -228,11 +230,11 @@ const TaskDetail: Component = () => {
                     <div class="p-3 bg-base-200 rounded-lg text-xs space-y-2">
                       <div class="font-bold">{file.path.split("/").pop()}</div>
                       <div class="text-[10px] opacity-70 break-all whitespace-normal">
-                        {file.uris?.map((u: any) => (
-                          <div class="mb-1">
-                            {u.uri} ({u.status})
-                          </div>
-                        ))}
+                      {file.uris?.map((u: any) => (
+                        <div class="mb-1">
+                          {u.uri} ({u.status})
+                        </div>
+                      ))}
                       </div>
                     </div>
                   ))}
@@ -249,10 +251,16 @@ const TaskDetail: Component = () => {
               {t("task-detail.edit")()}
             </button>
             <button
+              onClick={() => setIsExporting(true)}
+              class="btn btn-ghost btn-outline"
+            >
+              {t("task-detail.show-api")()}
+            </button>
+            <button
               onClick={() => {
                 aria2Store.removeTask(state.selectedTaskDetail!.gid);
                 aria2Store.setSelectedTask(null);
-              }}
+              } }
               class="btn btn-error btn-outline"
             >
               {t("common.delete")()}
@@ -268,6 +276,13 @@ const TaskDetail: Component = () => {
             out: state.selectedTaskDetail?.out,
             split: state.selectedTaskDetail?.split,
           }}
+        />
+      </Show>
+      <Show when={isExporting()}>
+        <ExportCommandDialog 
+          isOpen={isExporting()} 
+          onClose={() => setIsExporting(false)} 
+          task={state.selectedTaskDetail} 
         />
       </Show>
     </Show>

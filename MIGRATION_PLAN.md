@@ -84,7 +84,7 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Enter custom folder or HTTP header -> check RPC invocation payload.
   - Status: Completed
 
-- [ ] **Task 13: Torrent File Selection (Selective Downloading)**
+- [x] **Task 13: Torrent File Selection (Selective Downloading)**
   - Complexity: Medium
   - Description: Add checkboxes next to files in the `files` tab in `TaskDetail.tsx` to toggle selective download via `aria2.changeOption` with the `select-file` parameter.
   - Verification: Uncheck a file -> verify RPC call to `aria2.changeOption` contains `select-file` with the correct index list.
