@@ -1,3 +1,4 @@
+import { titleService } from "./utils/title-service";
 import { createSignal, onMount, createEffect, type Component } from "solid-js";
 import Layout from "./components/Layout";
 import ConnectionSettings from "./components/ConnectionSettings";
@@ -52,6 +53,13 @@ const App: Component = () => {
         : "light";
     }
     document.documentElement.setAttribute("data-theme", activeTheme);
+  });
+
+  // Dynamic document title update
+  createEffect(() => {
+    titleService.updateTitle();
+    // Accessing globalStat here makes this effect track it
+    const _ = aria2Store.getState().globalStat;
   });
 
   return (
