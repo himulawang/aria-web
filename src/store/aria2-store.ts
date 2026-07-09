@@ -344,7 +344,7 @@ export const aria2Store = {
   async addMetalinkTask(base64Content: string, options: any = {}) {
     if (!client) await this.connect();
     try {
-      await client!.request("aria2.addMetalinkL", [base64Content, options]);
+      await client!.request("aria2.addMetalink", [base64Content, options]);
       await this.fetchTasks();
     } catch (e) {
       logger.error(`Failed to add metalink task: ${e}`, LOG_CONTEXT);

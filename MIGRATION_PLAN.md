@@ -82,19 +82,19 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Complexity: Medium
   - Description: Extend `AddTask.tsx` with an "Advanced Settings" accordion. Render input fields for custom options (e.g., `dir`, `out`, `header`, `user-agent`, `split`) and pass them during task creation.
   - Verification: Enter custom folder or HTTP header -> check RPC invocation payload.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 13: Torrent File Selection (Selective Downloading)**
   - Complexity: Medium
   - Description: Add checkboxes next to files in the `files` tab in `TaskDetail.tsx` to toggle selective download via `aria2.changeOption` with the `select-file` parameter.
   - Verification: Uncheck a file -> verify RPC call to `aria2.changeOption` contains `select-file` with the correct index list.
-  - Status: Pending
+  - Status: Completed
 
-- [ ] **Task 14: Metalink File Import UI & Integration**
+- [x] **Task 14: Metalink File Import UI & Integration**
   - Complexity: Low
   - Description: Integrate `.metalink` file upload in `AddTask.tsx` to read the file as base64 and invoke `aria2Store.addMetalinkTask`.
   - Verification: Import a `.metalink` file -> check if `addMetalinkTask` is triggered with correct payload.
-  - Status: Pending
+  - Status: Completed
 
 - [ ] **Task 15: Export CLI Command & RPC API Dialog**
   - Complexity: Medium
