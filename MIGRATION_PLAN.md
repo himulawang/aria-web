@@ -36,7 +36,7 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Input Magnet -> check RPC params.
   - Status: Completed
 
-- [ ] **Task 5: Task Detail Editing UI**
+- [x] **Task 5: Task Detail Editing UI**
   - Complexity: Medium
   - Description: Implement UI for changing `dir`, `out`, `split` via `aria2.changeOption`.
   - Verification: Change path -> `tellStatus` check.
