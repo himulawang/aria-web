@@ -17,6 +17,7 @@ const TaskDetail: Component = () => {
   const [peers, setPeers] = createSignal<any[]>([]);
   const [isActionLoading, setIsActionLoading] = createSignal(false);
   const [isEditing, setIsEditing] = createSignal(false);
+  const [selectedIndices, setSelectedIndices] = createSignal<Set<number>>(new Set());
 
   // Fetch peers when tab changes to 'peers'
   createEffect(() => {
@@ -52,6 +53,7 @@ const TaskDetail: Component = () => {
       await aria2Store.limitUploadSpeed(task.gid, limit);
     }
   };
+
 
   let detailRef: HTMLDivElement | undefined;
 

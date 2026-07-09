@@ -78,7 +78,7 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Choose sorting parameter -> verify order updates accordingly.
   - Status: Completed
 
-- [ ] **Task 12: Create Task with Custom Parameters UI**
+- [x] **Task 12: Create Task with Custom Parameters UI**
   - Complexity: Medium
   - Description: Extend `AddTask.tsx` with an "Advanced Settings" accordion. Render input fields for custom options (e.g., `dir`, `out`, `header`, `user-agent`, `split`) and pass them during task creation.
   - Verification: Enter custom folder or HTTP header -> check RPC invocation payload.
