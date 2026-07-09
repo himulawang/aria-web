@@ -385,15 +385,15 @@ export const aria2Store = {
     }
   },
 
-  async getOption(name: string) {
+  async getTaskOption(gid: string, name: string) {
     if (!client) await this.connect();
     try {
       return await client!.request<string | number | boolean>(
         "aria2.getOption",
-        [name],
+        [gid, name],
       );
     } catch (e) {
-      logger.error(`Failed to get option ${name}: ${e}`, LOG_CONTEXT);
+      logger.error(`Failed to get task option ${name} for ${gid}: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },
@@ -452,12 +452,12 @@ export const aria2Store = {
     }
   },
 
-  async changeOption(name: string, value: any) {
+  async changeTaskOption(gid: string, options: Record<string, any>) {
     if (!client) await this.connect();
     try {
-      await client!.request("aria2.changeOption", [name, value]);
+      await client!.request("aria2.changeOption", [gid, options]);
     } catch (e) {
-      logger.error(`Failed to change option ${name}: ${e}`, LOG_CONTEXT);
+      logger.error(`Failed to change task options for ${gid}: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },

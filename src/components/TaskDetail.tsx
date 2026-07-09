@@ -8,12 +8,14 @@ import {
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import { formatSize, formatSpeed } from "../utils/format";
+import TaskEditDialog from "./TaskEditDialog";
 
 const TaskDetail: Component = () => {
   const state = aria2Store.getState();
   const [activeTab, setActiveTab] = createSignal("overview");
   const [peers, setPeers] = createSignal<any[]>([]);
   const [isActionLoading, setIsActionLoading] = createSignal(false);
+  const [isEditing, setIsEditing] = createSignal(false);
 
   // Fetch peers when tab changes to 'peers'
   createEffect(() => {
@@ -55,7 +57,6 @@ const TaskDetail: Component = () => {
   // Click outside to close
   createEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      // 只有在点击的是 Detail Panel 外部时才关闭
       if (
         detailRef &&
         !detailRef.contains(e.target as Node) &&
@@ -237,6 +238,12 @@ const TaskDetail: Component = () => {
 
           <div class="flex gap-2 pt-4">
             <button
+              onClick={() => setIsEditing(true)}
+              class="btn btn-primary btn-outline"
+            >
+              {t("task-detail.edit")()}
+            </button>
+            <button
               onClick={() => {
                 aria2Store.removeTask(state.selectedTaskDetail!.gid);
                 aria2Store.setSelectedTask(null);
@@ -248,6 +255,16 @@ const TaskDetail: Component = () => {
           </div>
         </div>
       </div>
+      <Show when={isEditing()}>
+        <TaskEditDialog
+          gid={state.selectedTaskDetail!.gid}
+          initialOptions={{
+            dir: state.selectedTaskDetail?.dir,
+            out: state.selectedTaskDetail?.out,
+            split: state.selectedTaskDetail?.split,
+          }}
+        />
+      </Show>
     </Show>
   );
 };

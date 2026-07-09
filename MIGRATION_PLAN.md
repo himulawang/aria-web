@@ -30,7 +30,7 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Switch lang -> check UI text.
   - Status: Completed
 
-- [ ] **Task 4: Magnet Link & File Import**
+- [x] **Task 4: Magnet Link & File Import**
   - Complexity: Medium
   - Description: Enhance `addTask` to handle Magnet and local file imports.
   - Verification: Input Magnet -> check RPC params.
