@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:20-alpine AS build-stage
+FROM node:24-alpine AS build-stage
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Production Stage
-FROM staticwebserver/static-web-server:0.11.0
+FROM ghcr.io/static-web-server/static-web-server:2-alpine
 
 # Copy the build output from build-stage to the SWS public directory
 COPY --from=build-stage /app/dist /public
