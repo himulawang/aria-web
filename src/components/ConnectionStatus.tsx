@@ -9,7 +9,6 @@ import {
 } from "solid-icons/hi";
 
 const SpeedSummary: Component<{ isCollapsed: boolean }> = (props) => {
-  const state = aria2Store.getState();
   const [showLimits, setShowLimits] = createSignal(false);
   const [limits, setLimits] = createSignal({ download: 0, upload: 0 });
 
@@ -39,12 +38,12 @@ const SpeedSummary: Component<{ isCollapsed: boolean }> = (props) => {
           <div class="flex items-center gap-1.5">
             <HiOutlineArrowDownTray class="w-4 h-4 text-primary" />
             {!props.isCollapsed &&
-              formatSpeed(Number(state.globalStat?.downloadSpeed || 0))}
+              formatSpeed(Number(aria2Store.getState().globalStat?.downloadSpeed || 0))}
           </div>
           {!props.isCollapsed && (
             <div class="flex items-center gap-1.5">
               <HiOutlineArrowUpTray class="w-4 h-4 text-secondary" />
-              {formatSpeed(Number(state.globalStat?.uploadSpeed || 0))}
+              {formatSpeed(Number(aria2Store.getState().globalStat?.uploadSpeed || 0))}
             </div>
           )}
         </div>
@@ -118,8 +117,8 @@ const SpeedSummary: Component<{ isCollapsed: boolean }> = (props) => {
 };
 
 const ConnectionStatus: Component<{ isCollapsed: boolean }> = (props) => {
-  const state = aria2Store.getState();
   const statusInfo = createMemo(() => {
+    const state = aria2Store.getState();
     switch (state.connectionStatus) {
       case "connected":
         return { text: "Connected", color: "bg-success" };

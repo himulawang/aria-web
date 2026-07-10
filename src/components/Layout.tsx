@@ -8,6 +8,7 @@ import {
   HiOutlineCommandLine,
   HiOutlineIdentification,
   HiOutlineChartBar,
+  HiOutlineBugAnt,
 } from "solid-icons/hi";
 
 interface LayoutProps {
@@ -55,7 +56,7 @@ const Layout: Component<LayoutProps> = (props) => {
       position: "sidebar",
       icon: HiOutlineChartBar,
     },
-    { label: () => t("nav.debug")() || "Debug", view: "debug", position: "sidebar", icon: HiOutlineChartBar },
+    { label: () => t("nav.debug")() || "Debug", view: "debug", position: "sidebar", icon: HiOutlineBugAnt },
   ];
 
   return (

@@ -96,7 +96,7 @@ Migrate all features from AriaNg to aria-web, maintaining the lightweight SolidJ
   - Verification: Import a `.metalink` file -> check if `addMetalinkTask` is triggered with correct payload.
   - Status: Completed
 
-- [ ] **Task 15: Export CLI Command & RPC API Dialog**
+- [x] **Task 15: Export CLI Command & RPC API Dialog**
   - Complexity: Medium
   - Description: Add a "Show Command / API" action in `TaskDetail.tsx` opening a dialog that shows equivalent `aria2c` command-line command or raw JSON-RPC payload, matching AriaNg's export dialog.
   - Verification: Click action -> see copyable CLI command or JSON payload with all custom task headers/settings.

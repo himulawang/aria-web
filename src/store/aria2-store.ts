@@ -607,18 +607,28 @@ export const aria2Store = {
     pollingTimer = setInterval(async () => {
       if (state.connectionStatus !== "connected" || !client) return;
       try {
-        const calls = [
-          { method: "aria2.tellActive", params: [] },
-          { method: "aria2.getGlobalStat", params: [] },
-        ];
-        const results = await client!.multicall<any[]>(calls);
+        // Use verified fetch methods to ensure store is updated correctly
+        await Promise.all([
+          this.fetchTasks(),
+          this.fetchGlobalStat(),
+        ]);
 
-        const rawActive = results[0];
-        const active = Array.isArray(rawActive) && Array.isArray(rawActive[0])
-          ? rawActive[0]
-          : Array.isArray(rawActive) ? rawActive : [];
+        // Update isDownloading based on current tasks
+        const activeTasks = state.tasks.filter(t => {
+            // In a real scenario, we'd check the status of the task.
+            // For now, we rely on fetchTasks having updated the list.
+            // We'll check if there are tasks that are actually active.
+            // Since tellActive was used in fetchTasks, we can't easily distinguish
+            // without the full task object, but we can check if the total count > 0
+            // if that's what isDownloading represents.
+            return true; // This is a simplification; fetchTasks already updates state.tasks
+        });
 
-        const hasActiveTasks = active.length > 0;
+        // To correctly update isDownloading, we need to know how many are active.
+        // Let's just call a small request for active tasks.
+        const active = await client!.request<any[]>("aria2.tellActive", []);
+        const hasActiveTasks = active && active.length > 0;
+
         if (hasActiveTasks !== state.isDownloading) {
           setState("isDownloading", hasActiveTasks);
           logger.info(`Download state changed to: ${hasActiveTasks ? "Active" : "Idle"}`, LOG_CONTEXT);
@@ -626,7 +636,7 @@ export const aria2Store = {
       } catch (e) {
         logger.warn(`Polling error: ${e}`, LOG_CONTEXT);
       }
-    }, 3000);
+    }, 2000);
   },
 
   stopPolling() {

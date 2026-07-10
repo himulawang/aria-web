@@ -19,11 +19,11 @@ const ExportCommandDialog: Component<ExportCommandDialogProps> = (props) => {
     if (!props.task) return;
 
     // 1. aria2c command line
-    let cmd = \`aria2c "\${props.task.urls?.[0] || ""}"\`;
+    let cmd = `aria2c "${props.task.urls?.[0] || ""}"`;
     
-    if (props.task.dir) cmd += \` --dir="\${props.task.dir}"\`;
-    if (props.task.out) cmd += \` --out="\${props.task.out}"\`;
-    if (props.task.split) cmd += \` --split=\${props.task.split}\`;
+    if (props.task.dir) cmd += ` --dir="${props.task.dir}"`;
+    if (props.task.out) cmd += ` --out="${props.task.out}"`;
+    if (props.task.split) cmd += ` --split=${props.task.split}`;
     
     // Other options can be added here
     
