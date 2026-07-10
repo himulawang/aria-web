@@ -2,11 +2,29 @@ import { createMemo, createSignal, createEffect } from "solid-js";
 import { aria2Store } from "../store";
 import en from "./langs/en.json";
 import zhCn from "./langs/zh-cn.json";
+import zhTw from "./langs/zh-tw.json";
+import jaJp from "./langs/ja-JP.json";
+import ruRu from "./langs/ru-RU.json";
+import deDe from "./langs/de-DE.json";
+import frFr from "./langs/fr-FR.json";
+import es from "./langs/es.json";
+import itIt from "./langs/it-IT.json";
+import plPl from "./langs/pl-PL.json";
+import czCz from "./langs/cz-CZ.json";
 
 type TranslationMap = Record<string, string>;
 const translations: Record<string, any> = {
   en,
   "zh-cn": zhCn,
+  "zh-tw": zhTw,
+  "ja-JP": jaJp,
+  "ru-RU": ruRu,
+  "de-DE": deDe,
+  "fr-FR": frFr,
+  "es": es,
+  "it-IT": itIt,
+  "pl-PL": plPl,
+  "cz-CZ": czCz,
 };
 
 const [currentTranslations, setCurrentTranslations] =

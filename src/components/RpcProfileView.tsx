@@ -185,7 +185,7 @@ const RpcProfileView: Component<RpcProfileViewProps> = (props) => {
                                 aria2Store.setCurrentProfile(profile.id);
                               }}
                             >
-                              Select
+                              {t("rpc-profile.select")()}
                             </button>
                           </td>
                         </tr>
