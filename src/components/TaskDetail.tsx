@@ -4,9 +4,11 @@ import {
   createSignal,
   createEffect,
   For,
+  onCleanup,
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import { aria2Store } from "../store";
+import { notificationStore } from "../store/notification-store";
 import { t } from "../i18n";
 import { formatSize, formatSpeed } from "../utils/format";
 import { parsePeerId, calculatePeerProgress } from "../utils/peer";
@@ -50,6 +52,80 @@ const TaskDetail: Component = () => {
     aria2Store.setSelectedTask(null);
     setShowDeleteConfirm(false);
   };
+
+  const [servers, setServers] = createSignal<any[]>([]);
+  const [manageUrisFileIndex, setManageUrisFileIndex] = createSignal<number | null>(null);
+  const [newUrisInput, setNewUrisInput] = createSignal("");
+  const [urisToDelete, setUrisToDelete] = createSignal<Set<string>>(new Set());
+
+  const handleToggleUriDelete = (uri: string) => {
+    const next = new Set<string>(urisToDelete());
+    if (next.has(uri)) {
+      next.delete(uri);
+    } else {
+      next.add(uri);
+    }
+    setUrisToDelete(next);
+  };
+
+  const handleSaveUris = async () => {
+    const fileIdx = manageUrisFileIndex();
+    if (fileIdx === null) return;
+
+    const gid = state.selectedTaskDetail?.gid;
+    if (!gid) return;
+
+    const delUris = Array.from(urisToDelete());
+    const addUris = newUrisInput()
+      .split("\n")
+      .map((u) => u.trim())
+      .filter((u) => u.length > 0);
+
+    try {
+      await aria2Store.changeUri(gid, fileIdx + 1, delUris, addUris);
+      notificationStore.add("URIs updated successfully", "success");
+      await aria2Store.fetchTaskDetail(gid);
+    } catch (err) {
+      notificationStore.add(`Failed to update URIs: ${err}`, "error");
+    } finally {
+      setManageUrisFileIndex(null);
+      setNewUrisInput("");
+      setUrisToDelete(new Set<string>());
+    }
+  };
+
+  // Fetch servers when tab changes to 'servers'
+  createEffect(() => {
+    let timer: any = null;
+    const gid = state.selectedTaskDetail?.gid;
+
+    if (activeTab() === "servers" && gid && !state.selectedTaskDetail?.bittorrent) {
+      setServers([]);
+
+      const fetch = () => {
+        aria2Store.getServers(gid).then((s) => {
+          if (s) setServers(s);
+        });
+      };
+
+      fetch();
+      timer = setInterval(fetch, 2500);
+    } else {
+      setServers([]);
+    }
+
+    onCleanup(() => {
+      if (timer) clearInterval(timer);
+    });
+  });
+
+  // Reset tab to overview if task changes to BT and current tab is servers
+  createEffect(() => {
+    const isBt = !!state.selectedTaskDetail?.bittorrent;
+    if (isBt && activeTab() === "servers") {
+      setActiveTab("overview");
+    }
+  });
 
   // Fetch peers when tab changes to 'peers'
   createEffect(() => {
@@ -166,6 +242,14 @@ const TaskDetail: Component = () => {
             >
               {t("task-detail.tabs.files")()}
             </button>
+            <Show when={!state.selectedTaskDetail?.bittorrent}>
+              <button
+                class={`tab ${activeTab() === "servers" ? "tab-active" : ""}`}
+                onClick={() => setActiveTab("servers")}
+              >
+                Servers
+              </button>
+            </Show>
           </div>
 
           <Show when={activeTab() === "overview"}>
@@ -288,7 +372,20 @@ const TaskDetail: Component = () => {
                           onChange={() => {}} 
                           class="checkbox checkbox-xs"
                         />
-                        <div class="font-bold">{file.path.split("/").pop()}</div>
+                        <div class="font-bold flex-1">{file.path.split("/").pop()}</div>
+                        <Show when={!state.selectedTaskDetail?.bittorrent}>
+                          <button
+                            class="btn btn-ghost btn-xs text-primary font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUrisToDelete(new Set<string>());
+                              setNewUrisInput("");
+                              setManageUrisFileIndex(index);
+                            }}
+                          >
+                            Manage Links
+                          </button>
+                        </Show>
                       </div>
                       <div class="text-[10px] opacity-70 break-all whitespace-normal pl-6">
                       {file.uris?.map((u: any) => (
@@ -299,6 +396,55 @@ const TaskDetail: Component = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          </Show>
+
+          <Show when={activeTab() === "servers"}>
+            <div class="card bg-base-100 shadow-sm border border-base-300">
+              <div class="card-body p-4">
+                <h4 class="text-sm font-bold mb-4">
+                  Active Connections ({servers().reduce((acc, curr) => acc + (curr.servers?.length || 0), 0)})
+                </h4>
+                <div class="space-y-4">
+                  <Show
+                    when={servers().length > 0}
+                    fallback={
+                      <div class="text-center py-8 opacity-55 text-xs">
+                        No active server connections.
+                      </div>
+                    }
+                  >
+                    <For each={servers()}>
+                      {(serverGroup) => (
+                        <div class="space-y-2">
+                          <div class="text-[10px] font-bold opacity-60">File Index: {serverGroup.index}</div>
+                          <For each={serverGroup.servers}>
+                            {(srv) => (
+                              <div class="p-3 bg-base-200 rounded-lg text-xs space-y-1">
+                                <div class="font-medium break-all font-mono text-[10px] text-primary">
+                                  {srv.uri}
+                                </div>
+                                <div class="flex items-center justify-between text-[10px] pt-1">
+                                  <span>Speed: <strong class="text-success">{formatSpeed(Number(srv.downloadSpeed))}</strong></span>
+                                  <span
+                                    class={`badge badge-[9px] py-1 px-1.5 font-bold ${
+                                      srv.currentConnection === "true"
+                                        ? "badge-success text-success-content"
+                                        : "badge-ghost opacity-60"
+                                    }`}
+                                  >
+                                    {srv.currentConnection === "true" ? "CONNECTED" : "IDLE"}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </For>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
                 </div>
               </div>
             </div>
@@ -395,6 +541,87 @@ const TaskDetail: Component = () => {
             <div
               class="modal-backdrop bg-black/40"
               onClick={() => setShowDeleteConfirm(false)}
+            ></div>
+          </div>
+        </Portal>
+      </Show>
+
+      <Show when={manageUrisFileIndex() !== null}>
+        <Portal>
+          <div class="modal modal-open z-50">
+            <div class="modal-box w-11/12 max-w-lg space-y-4">
+              <h3 class="font-bold text-lg">Manage Links / Mirrors</h3>
+              
+              <div class="text-xs opacity-75 break-all font-semibold">
+                File: {state.selectedTaskDetail?.files?.[manageUrisFileIndex()!]?.path?.split("/").pop()}
+              </div>
+
+              {/* Current URIs list */}
+              <div class="space-y-2">
+                <div class="text-xs font-bold opacity-60">Current Connections & Mirrors:</div>
+                <div class="max-h-48 overflow-y-auto space-y-2 border border-base-300 p-2 rounded-lg bg-base-200">
+                  <For each={state.selectedTaskDetail?.files?.[manageUrisFileIndex()!]?.uris}>
+                    {(u) => (
+                      <div class="flex items-center justify-between gap-2 p-2 bg-base-100 rounded border border-base-200 text-xs">
+                        <span 
+                          class={`break-all flex-1 select-all font-mono text-[10px] ${
+                            urisToDelete().has(u.uri) ? "line-through text-error opacity-60" : ""
+                          }`}
+                        >
+                          {u.uri}
+                        </span>
+                        <div class="flex items-center gap-2">
+                          <span class={`badge badge-xs ${u.status === "used" ? "badge-success text-success-content" : "badge-ghost"}`}>
+                            {u.status}
+                          </span>
+                          <button
+                            type="button"
+                            class={`btn btn-xs ${
+                              urisToDelete().has(u.uri) ? "btn-warning" : "btn-error"
+                            }`}
+                            onClick={() => handleToggleUriDelete(u.uri)}
+                          >
+                            {urisToDelete().has(u.uri) ? "Undo" : "Delete"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
+
+              {/* Add mirror URLS */}
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text font-bold text-xs opacity-60">Add New Mirror URLs (One per line):</span>
+                </label>
+                <textarea
+                  class="textarea textarea-bordered h-24 font-mono text-xs placeholder:opacity-50"
+                  placeholder="http://example.com/file.zip&#10;https://another.mirror/file.zip"
+                  value={newUrisInput()}
+                  onInput={(e) => setNewUrisInput(e.currentTarget.value)}
+                />
+              </div>
+
+              <div class="modal-action">
+                <button
+                  class="btn btn-sm btn-ghost"
+                  onClick={() => setManageUrisFileIndex(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  class="btn btn-sm btn-primary"
+                  onClick={handleSaveUris}
+                  disabled={urisToDelete().size === 0 && !newUrisInput().trim()}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+            <div
+              class="modal-backdrop bg-black/40"
+              onClick={() => setManageUrisFileIndex(null)}
             ></div>
           </div>
         </Portal>

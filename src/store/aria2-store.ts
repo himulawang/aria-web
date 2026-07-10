@@ -59,6 +59,10 @@ const [state, setState] = createStore<Aria2State>({
 
 let client: Aria2Client | null = null;
 let pollingTimer: any = null;
+// GIDs that should be hidden from the task list (e.g. ED2K search tasks)
+const hiddenGids = new Set<string>();
+// Guard to prevent duplicate event listener registration
+let listenersSetup = false;
 
 const LOG_CONTEXT = "aria2Store";
 
@@ -248,6 +252,7 @@ export const aria2Store = {
 
   async disconnect() {
     this.stopPolling();
+    listenersSetup = false;
     if (client) {
       await client.disconnect();
     }
@@ -278,7 +283,11 @@ export const aria2Store = {
       ]);
 
       const allTasks = [...active, ...waiting, ...stopped].filter(
-        (task) => task && typeof task === "object" && "gid" in task,
+        (task) =>
+          task &&
+          typeof task === "object" &&
+          "gid" in task &&
+          !hiddenGids.has(task.gid), // filter out hidden GIDs (e.g. ED2K search tasks)
       );
 
       setState("tasks", allTasks);
@@ -487,7 +496,18 @@ export const aria2Store = {
     try {
       return await client!.request<any[]>("aria2.getServers", [gid]);
     } catch (e) {
-      return await client!.request<any[]>("aria2.getServers", [gid]);
+      logger.debug(`Failed to get servers for task ${gid}: ${e}`, LOG_CONTEXT);
+      return [];
+    }
+  },
+
+  async getUris(gid: string): Promise<any[]> {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<any[]>("aria2.getUris", [gid]);
+    } catch (e) {
+      logger.debug(`Failed to get URIs for task ${gid}: ${e}`, LOG_CONTEXT);
+      return [];
     }
   },
 
@@ -504,6 +524,85 @@ export const aria2Store = {
     } catch (e) {
       return "Error";
     }
+  },
+
+  async purgeDownloadResult(): Promise<string> {
+    if (!client) await this.connect();
+    try {
+      const result = await client!.request<string>("aria2.purgeDownloadResult", []);
+      await this.fetchTasks();
+      return result;
+    } catch (e) {
+      logger.error(`Failed to purge download results: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async forceShutdown(): Promise<string> {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<string>("aria2.forceShutdown", []);
+    } catch (e) {
+      logger.error(`Failed to execute force shutdown: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async getSessionInfo(): Promise<any> {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<any>("aria2.getSessionInfo", []);
+    } catch (e) {
+      logger.error(`Failed to get session info: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async listNotifications(): Promise<string[]> {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<string[]>("system.listNotifications", []);
+    } catch (e) {
+      logger.error(`Failed to list notifications: ${e}`, LOG_CONTEXT);
+      return [];
+    }
+  },
+
+  async ed2kSearch(keyword: string): Promise<string> {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<string>("aria2.ed2kSearch", [keyword]);
+    } catch (e) {
+      logger.error(`Failed to execute ED2K search for keyword '${keyword}': ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async getEd2kSearchResults(searchId: string): Promise<any> {
+    if (!client) await this.connect();
+    try {
+      return await client!.request<any>("aria2.getEd2kSearchResults", [searchId]);
+    } catch (e) {
+      logger.error(`Failed to get ED2K search results for search ID '${searchId}': ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  /** Hide a GID from the task list (used for ED2K search tasks). */
+  hideGid(gid: string) {
+    hiddenGids.add(gid);
+    // Also remove it from the visible task list immediately
+    setState("tasks", (tasks) => tasks.filter((t) => t.gid !== gid));
+    // If it was selected, deselect it
+    if (state.selectedTaskId === gid) {
+      setState("selectedTaskId", null);
+      setState("selectedTaskDetail", null);
+    }
+  },
+
+  /** Stop hiding a GID (call when the search task is done/removed). */
+  unhideGid(gid: string) {
+    hiddenGids.delete(gid);
   },
 
   async changeUri(
@@ -720,11 +819,14 @@ export const aria2Store = {
   },
 
   setupEventListeners() {
-    if (!client) return;
+    if (!client || listenersSetup) return;
+    listenersSetup = true;
 
     client.on("aria2.onDownloadStart", (params: any[]) => {
       const gid = params[0].gid;
       logger.debug(`Task started: ${gid}`, LOG_CONTEXT);
+      // Skip hidden GIDs (e.g. ED2K search tasks — they are not real downloads)
+      if (hiddenGids.has(gid)) return;
       setState("isDownloading", true);
       this.fetchTaskDetail(gid).catch((err) =>
         logger.error(`Error in onDownloadStart: ${err}`, LOG_CONTEXT),
@@ -766,6 +868,9 @@ export const aria2Store = {
     client.on("aria2.onDownloadComplete", (params: any[]) => {
       const gid = params[0].gid;
       logger.debug(`Task completed: ${gid}`, LOG_CONTEXT);
+      // Skip hidden GIDs (e.g. ED2K search tasks) — do NOT touch hiddenGids here,
+      // the polling loop in Ed2kSearch manages the GID lifecycle.
+      if (hiddenGids.has(gid)) return;
       setState("tasks", (t) => t.gid === gid, { status: "complete" });
       setTimeout(() => {
         this.fetchTaskDetail(gid).catch((err) =>

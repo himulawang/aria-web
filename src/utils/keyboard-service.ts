@@ -28,13 +28,10 @@ class KeyboardService {
     this.isMac = /(Mac|iPhone|iPod|iPad)/i.test(platform);
 
     window.addEventListener("keydown", (event) => {
-      // Ignore shortcuts if user is typing in an input or textarea
+      // Ignore ALL global shortcuts when user is typing in an input, textarea, or contenteditable
       const target = event.target as HTMLElement;
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        // Allow standard text selection/search shortcuts inside inputs
-        if ((event.ctrlKey || event.metaKey) && (event.key === 'a' || event.key === 'f')) {
-            return;
-        }
+        return;
       }
 
       const key = event.key.toLowerCase();

@@ -8,13 +8,14 @@ import StatusView from "./components/StatusView";
 import TaskList from "./components/TaskList";
 import TaskDetail from "./components/TaskDetail";
 import DebugView from "./components/DebugView";
+import Ed2kSearch from "./components/Ed2kSearch";
 import { aria2Store } from "./store";
 import { aria2GlobalAvailableOptions } from "./config/aria2-available-options";
 import { keyboardService } from "./utils/keyboard-service";
 
 const App: Component = () => {
   const [view, setView] = createSignal<
-    "downloads" | "settings" | "status" | "app-settings" | "rpc-profiles" | "debug"
+    "downloads" | "settings" | "status" | "app-settings" | "rpc-profiles" | "debug" | "ed2k"
   >("downloads");
   const [activeSubTab, setActiveSubTab] = createSignal<string | null>(
     Object.keys(aria2GlobalAvailableOptions)[0],
@@ -82,6 +83,8 @@ const App: Component = () => {
           <AppSettingsView />
         ) : view() === "status" ? (
           <StatusView />
+        ) : view() === "ed2k" ? (
+          <Ed2kSearch />
         ) : view() === "debug" ? (
           <DebugView />
         ) : (

@@ -4,11 +4,26 @@ import { t } from "../i18n";
 
 const StatusView: Component = () => {
   const state = aria2Store.getState();
-  const [serverInfo, { refetch }] = createResource(
+  const [statusInfo, { refetch }] = createResource(
     () => state.connectionStatus,
     async (status) => {
       if (status === "connected") {
-        return await aria2Store.getServerInfo();
+        try {
+          const [serverInfo, sessionInfo, notifications] = await Promise.all([
+            aria2Store.getServerInfo(),
+            aria2Store.getSessionInfo().catch(() => ({ sessionId: "N/A" })),
+            aria2Store.listNotifications().catch(() => []),
+          ]);
+          return {
+            version: serverInfo?.version || "-",
+            enabledFeatures: serverInfo?.enabledFeatures || [],
+            sessionId: sessionInfo?.sessionId || "N/A",
+            notifications: notifications || [],
+          };
+        } catch (e) {
+          console.error(e);
+          return null;
+        }
       }
       return null;
     },
@@ -20,10 +35,10 @@ const StatusView: Component = () => {
         <h2 class="text-2xl font-bold">Aria2 Status</h2>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="stat bg-base-100 shadow-sm border border-base-300">
           <div class="stat-title">{t("status.rpcAddress")()}</div>
-          <div class="stat-value text-sm truncate">
+          <div class="stat-value text-xs truncate max-w-[15rem]" title={state.rpcProfiles.find((p) => p.id === state.currentProfileId)?.config.url || "-"}>
             {state.rpcProfiles.find((p) => p.id === state.currentProfileId)
               ?.config.url || "-"}
           </div>
@@ -48,29 +63,61 @@ const StatusView: Component = () => {
           <div class="stat-title">Aria2 Version</div>
           <div class="stat-value text-sm">
             <Show
-              when={!serverInfo.loading}
+              when={!statusInfo.loading}
               fallback={<span class="animate-pulse">Loading...</span>}
             >
-              {serverInfo()?.version || "-"}
+              {statusInfo()?.version || "-"}
+            </Show>
+          </div>
+        </div>
+
+        <div class="stat bg-base-100 shadow-sm border border-base-300">
+          <div class="stat-title">Session ID</div>
+          <div class="stat-value text-xs truncate max-w-[12rem]" title={statusInfo()?.sessionId || "-"}>
+            <Show
+              when={!statusInfo.loading}
+              fallback={<span class="animate-pulse">Loading...</span>}
+            >
+              {statusInfo()?.sessionId || "-"}
             </Show>
           </div>
         </div>
       </div>
 
-      <div class="card bg-base-100 shadow-sm border border-base-300">
-        <div class="card-body">
-          <h3 class="card-title text-lg mb-4">Enabled Features</h3>
-          <div class="flex flex-wrap gap-2">
-            <Show
-              when={!serverInfo.loading}
-              fallback={<span class="animate-pulse">Loading...</span>}
-            >
-              <For each={serverInfo()?.enabledFeatures || []}>
-                {(feature) => (
-                  <div class="badge badge-ghost border-base-300">{feature}</div>
-                )}
-              </For>
-            </Show>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+          <div class="card-body">
+            <h3 class="card-title text-lg mb-4">Enabled Features</h3>
+            <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+              <Show
+                when={!statusInfo.loading}
+                fallback={<span class="animate-pulse">Loading...</span>}
+              >
+                <For each={statusInfo()?.enabledFeatures || []}>
+                  {(feature) => (
+                    <div class="badge badge-ghost border-base-300">{feature}</div>
+                  )}
+                </For>
+              </Show>
+            </div>
+          </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+          <div class="card-body">
+            <h3 class="card-title text-lg mb-4">Event Notifications</h3>
+            <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+              <Show
+                when={!statusInfo.loading}
+                fallback={<span class="animate-pulse">Loading...</span>}
+              >
+                <For each={statusInfo()?.notifications || []}>
+                  {(notify) => (
+                    <div class="badge badge-outline badge-primary text-[10px]">{notify}</div>
+                  )}
+                </For>
+              </Show>
+            </div>
           </div>
         </div>
       </div>
@@ -82,15 +129,38 @@ const StatusView: Component = () => {
         >
           Save Session
         </button>
-        <button
-          onClick={async () => {
-            await aria2Store.shutdown();
-            refetch();
-          }}
-          class="btn btn-error btn-outline"
-        >
-          Shutdown Aria2
-        </button>
+        <div class="dropdown dropdown-end">
+          <div tabindex="0" role="button" class="btn btn-error btn-outline flex items-center gap-1">
+            Shutdown Options
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-48 p-2 shadow border border-base-300 mt-1">
+            <li>
+              <button
+                onClick={async () => {
+                  await aria2Store.shutdown();
+                  refetch();
+                }}
+                class="text-error"
+              >
+                Shutdown Gracefully
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={async () => {
+                  await aria2Store.forceShutdown();
+                  refetch();
+                }}
+                class="text-error font-bold"
+              >
+                Force Shutdown
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   );

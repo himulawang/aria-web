@@ -329,6 +329,16 @@ const TaskList: Component = () => {
                     </li>
                   </ul>
                 </div>
+
+                <button
+                  onClick={async () => {
+                    await aria2Store.purgeDownloadResult();
+                  }}
+                  class="btn btn-sm btn-ghost btn-square text-error/80"
+                  title="Purge Completed/Stopped Tasks"
+                >
+                  <HiOutlineTrash class="w-5 h-5" />
+                </button>
               </>
             }
           >
