@@ -1,5 +1,3 @@
-import { notificationStore } from "../store/notification-store";
-
 export type KeyboardAction = 
   | "ADD_TASK" 
   | "OPEN_SETTINGS" 
@@ -26,7 +24,7 @@ class KeyboardService {
   init() {
     if (this.isInitialized) return;
     
-    const platform = window.navigator?.userAgentData?.platform || window.navigator?.platform || "";
+    const platform = window.navigator?.platform || "";
     this.isMac = /(Mac|iPhone|iPod|iPad)/i.test(platform);
 
     window.addEventListener("keydown", (event) => {

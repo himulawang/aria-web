@@ -83,6 +83,7 @@
   "task-detail.gid": "GID:",
   "task-detail.out": "出力ファイル",
   "task-detail.pause": "一時停止",
+  "task-detail.progress": "進捗:",
   "task-detail.resume": "再開",
   "task-detail.split": "分割",
   "task-detail.speedLimits": "速度制限 (KB/s)",

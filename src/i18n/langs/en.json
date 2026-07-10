@@ -77,7 +77,7 @@
   "task-detail.gid": "GID:",
   "task-detail.out": "Output File",
   "task-detail.pause": "Pause",
-  "task-detail.progress": "Progress:",
+  "task-detail.progress": "Progress",
   "task-detail.resume": "Resume",
   "task-detail.split": "Split",
   "task-detail.speedLimits": "Speed Limits (KB/s)",

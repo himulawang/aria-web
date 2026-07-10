@@ -1,7 +1,6 @@
 import {
   type Component,
   createSignal,
-  Show,
 } from "solid-js";
 import { t } from "../i18n";
 import Dialog from "./Dialog";

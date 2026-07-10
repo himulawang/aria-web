@@ -1,4 +1,4 @@
-import { type Component, createSignal, For, Show, onMount } from "solid-js";
+import { type Component, createSignal, For, onMount } from "solid-js";
 import { aria2Store } from "../store";
 import { notificationStore } from "../store/notification-store";
 import { t } from "../i18n";
@@ -58,7 +58,7 @@ const ConnectionSettings: Component<ConnectionSettingsProps> = (props) => {
                 <For
                   each={
                     aria2GlobalAvailableOptions[
-                      props.activeSubTab || "basicOptions"
+                      (props.activeSubTab || "basicOptions") as keyof typeof aria2GlobalAvailableOptions
                     ] || aria2GlobalAvailableOptions["basicOptions"]
                   }
                 >

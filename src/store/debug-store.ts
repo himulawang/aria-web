@@ -1,5 +1,4 @@
 import { createStore } from "solid-js/store";
-import { logger } from "../core/logger";
 
 export interface DebugLog {
   id: number;
@@ -28,8 +27,6 @@ const [state, setState] = createStore<DebugState>({
 });
 
 let logIndex = 0;
-
-const LOG_LEVEL_VALUES = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
 
 export const debugStore = {
   getState: () => state,

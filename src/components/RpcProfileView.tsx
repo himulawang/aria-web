@@ -1,4 +1,4 @@
-import { type Component, createSignal, For, Show } from "solid-js";
+import { type Component, createSignal, For } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 
@@ -26,6 +26,8 @@ const RpcProfileView: Component<RpcProfileViewProps> = (props) => {
           url: form().url,
           token: form().token,
           useWebSocket: form().useWebSocket,
+          httpMethod: profile?.config?.httpMethod || "POST",
+          wsReconnectInterval: profile?.config?.wsReconnectInterval || 5000,
         },
       });
     } else {

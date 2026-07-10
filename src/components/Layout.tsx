@@ -1,4 +1,5 @@
 import { type Component, type JSX, createSignal, For, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import { t } from "../i18n";
 import Toast from "./Toast";
 import ConnectionStatus, { SpeedSummary } from "./ConnectionStatus";
@@ -69,7 +70,7 @@ const Layout: Component<LayoutProps> = (props) => {
         </main>
       </div>
       <div class="drawer-side">
-        <label htmlFor="my-drawer" class="drawer-overlay"></label>
+        <label for="my-drawer" class="drawer-overlay"></label>
         <aside
           class={`menu p-4 h-full bg-base-100 text-base-content border-r border-base-300 flex flex-col transition-all duration-300 ${isCollapsed() ? "w-16" : "w-64"}`}
         >

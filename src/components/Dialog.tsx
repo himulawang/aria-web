@@ -1,24 +1,28 @@
-import { type Component, Show} from "solid-js";
+import { type Component, Show, type JSX } from "solid-js";
 import { dialogStore } from "../store/dialog-store";
 
-const Dialog: Component = () => {
-    const { dialog } = dialogStore;
+interface DialogProps {
+    title?: string;
+    children?: JSX.Element;
+    onClose?: () => void;
+}
 
-    const getAlertClass = () => {
-        switch (dialog.type) {
-            case "success": return "alert-success";
-            case "error": return "alert-error";
-            case "warning": return "alert-warning";
-            default: return "alert-info";
-        }
-    };
+const Dialog: Component<DialogProps> = (props) => {
+    const dialog = dialogStore.dialog;
+
+    // If we have children, we use the props. Otherwise, we use the global store.
+    const isOpen = props.children ? true : dialog.isOpen;
+    const title = props.title || dialog.title;
+    const onClose = props.onClose || (() => dialogStore.close());
+    const message = dialog.message;
 
     return (
-        <Show when={dialog.isOpen}>
+        <Show when={isOpen}>
             <div class="modal modal-open">
                 <div class="modal-box">
-                    <h3 class="font-bold text-lg mb-2">{dialog.title}</h3>
-                    <p class="py-4">{dialog.message}</p>
+                    <h3 class="font-bold text-lg mb-2">{title}</h3>
+                    {message && <p class="py-4">{message}</p>}
+                    {props.children}
                     <div class="modal-action">
                         <Show when={dialog.isConfirmDialog}>
                             <button 
@@ -30,13 +34,13 @@ const Dialog: Component = () => {
                         </Show>
                         <button 
                             class={`btn ${dialog.type === 'error' ? 'btn-error' : 'btn-primary'}`} 
-                            onClick={() => dialogStore.handleConfirm()}
+                            onClick={onClose}
                         >
-                            {dialog.confirmText || "OK"}
+                            {props.children ? (props.onClose ? "Close" : "OK") : (dialog.confirmText || "OK")}
                         </button>
                     </div>
                 </div>
-                <div class="modal-backdrop" onClick={() => dialogStore.close()}></div>
+                <div class="modal-backdrop" onClick={onClose}></div>
             </div>
         </Show>
     );

@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, type Component, Show, createMemo } from "solid-js";
+import { createSignal, onCleanup, onMount, type Component } from "solid-js";
 import { Portal } from "solid-js/web";
 
 interface TooltipProps {

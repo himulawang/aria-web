@@ -83,6 +83,7 @@
   "task-detail.gid": "GID:",
   "task-detail.out": "輸出檔案",
   "task-detail.pause": "暫停",
+  "task-detail.progress": "進度",
   "task-detail.resume": "恢復",
   "task-detail.split": "分片",
   "task-detail.speedLimits": "速度限制 (KB/s)",

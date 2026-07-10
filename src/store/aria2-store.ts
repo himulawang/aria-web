@@ -614,18 +614,6 @@ export const aria2Store = {
         ]);
 
         // Update isDownloading based on current tasks
-        const activeTasks = state.tasks.filter(t => {
-            // In a real scenario, we'd check the status of the task.
-            // For now, we rely on fetchTasks having updated the list.
-            // We'll check if there are tasks that are actually active.
-            // Since tellActive was used in fetchTasks, we can't easily distinguish
-            // without the full task object, but we can check if the total count > 0
-            // if that's what isDownloading represents.
-            return true; // This is a simplification; fetchTasks already updates state.tasks
-        });
-
-        // To correctly update isDownloading, we need to know how many are active.
-        // Let's just call a small request for active tasks.
         const active = await client!.request<any[]>("aria2.tellActive", []);
         const hasActiveTasks = active && active.length > 0;
 

@@ -83,7 +83,7 @@
   "task-detail.gid": "GID:",
   "task-detail.out": "Выходной файл",
   "task-detail.pause": "Пауза",
-  "task-detail.progress": "Прогресс:",
+  "task-detail.progress": "Прогресс",
   "task-detail.resume": "Возобновить",
   "task-detail.split": "Разбиение",
   "task-detail.speedLimits": "Лимиты скорости (КБ/с)",

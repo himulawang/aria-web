@@ -7,7 +7,6 @@ import RpcProfileView from "./components/RpcProfileView";
 import StatusView from "./components/StatusView";
 import TaskList from "./components/TaskList";
 import TaskDetail from "./components/TaskDetail";
-import AddTask from "./components/AddTask";
 import DebugView from "./components/DebugView";
 import { aria2Store } from "./store";
 import { aria2GlobalAvailableOptions } from "./config/aria2-available-options";
@@ -59,7 +58,7 @@ const App: Component = () => {
   createEffect(() => {
     titleService.updateTitle();
     // Accessing globalStat here makes this effect track it
-    const _ = aria2Store.getState().globalStat;
+    aria2Store.getState().globalStat;
   });
 
   return (

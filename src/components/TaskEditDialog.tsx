@@ -1,6 +1,5 @@
 import {
   type Component,
-  Show,
   createSignal,
 } from "solid-js";
 import { aria2Store } from "../store";

@@ -16,7 +16,6 @@ const TaskDetail: Component = () => {
   const state = aria2Store.getState();
   const [activeTab, setActiveTab] = createSignal("overview");
   const [peers, setPeers] = createSignal<any[]>([]);
-  const [isActionLoading, setIsActionLoading] = createSignal(false);
   const [isEditing, setIsEditing] = createSignal(false);
   const [isExporting, setIsExporting] = createSignal(false);
   const [selectedIndices, setSelectedIndices] = createSignal<Set<number>>(new Set());
@@ -33,29 +32,49 @@ const TaskDetail: Component = () => {
     }
   });
 
-  const handleAction = async (action: "pause" | "resume") => {
-    setIsActionLoading(true);
-    const task = state.selectedTaskDetail;
-    if (task) {
-      if (action === "pause") await aria2Store.pauseTask(task.gid);
-      else await aria2Store.resumeTask(task.gid);
+  // Fetch selection state when tab changes to 'files'
+  createEffect(async () => {
+    const gid = state.selectedTaskDetail?.gid;
+    if (activeTab() === "files" && gid) {
+      try {
+        const val = await aria2Store.getTaskOption(gid, "select-file");
+        if (val && typeof val === "string" && val.trim() !== "") {
+          const indices = new Set(
+            val.split(",")
+               .flatMap(part => {
+                 if (part.includes("-")) {
+                   const [start, end] = part.split("-").map(Number);
+                   return Array.from({length: end - start + 1}, (_, i) => start + i);
+                 }
+                 return [Number(part)];
+               })
+               .filter(n => !isNaN(n))
+          );
+          setSelectedIndices(indices);
+        } else {
+          setSelectedIndices(new Set<number>());
+        }
+      } catch (e) {
+        console.error(`Failed to fetch select-file option: ${e}`);
+      }
     }
-    setIsActionLoading(false);
-  };
+  });
 
-  const handleSpeedChange = async (type: "down" | "up", value: string) => {
-    const task = state.selectedTaskDetail;
-    if (!task) return;
-    const limit = parseInt(value) * 1024; // Convert KB to bytes
-    if (isNaN(limit)) return;
-
-    if (type === "down") {
-      await aria2Store.limitDownloadSpeed(task.gid, limit);
+  const toggleFileSelection = async (index: number) => {
+    const current = new Set(selectedIndices());
+    if (current.has(index)) {
+      current.delete(index);
     } else {
-      await aria2Store.limitUploadSpeed(task.gid, limit);
+      current.add(index);
+    }
+    setSelectedIndices(current);
+    
+    const gid = state.selectedTaskDetail?.gid;
+    if (gid) {
+      const indicesString = Array.from(current).sort((a, b) => a - b).join(",");
+      await aria2Store.changeTaskOption(gid, { "select-file": indicesString });
     }
   };
-
 
   let detailRef: HTMLDivElement | undefined;
 
@@ -226,10 +245,21 @@ const TaskDetail: Component = () => {
                   {t("task-detail.files")()}
                 </h4>
                 <div class="space-y-4">
-                  {state.selectedTaskDetail?.files?.map((file: any) => (
-                    <div class="p-3 bg-base-200 rounded-lg text-xs space-y-2">
-                      <div class="font-bold">{file.path.split("/").pop()}</div>
-                      <div class="text-[10px] opacity-70 break-all whitespace-normal">
+                  {state.selectedTaskDetail?.files?.map((file: any, index: number) => (
+                    <div 
+                      class={`p-3 rounded-lg text-xs space-y-2 cursor-pointer transition-colors ${selectedIndices().has(index) ? 'bg-primary/20 border border-primary/30' : 'bg-base-200'}`}
+                      onClick={() => toggleFileSelection(index)}
+                    >
+                      <div class="flex items-center gap-2">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedIndices().has(index)} 
+                          onChange={() => {}} 
+                          class="checkbox checkbox-xs"
+                        />
+                        <div class="font-bold">{file.path.split("/").pop()}</div>
+                      </div>
+                      <div class="text-[10px] opacity-70 break-all whitespace-normal pl-6">
                       {file.uris?.map((u: any) => (
                         <div class="mb-1">
                           {u.uri} ({u.status})
