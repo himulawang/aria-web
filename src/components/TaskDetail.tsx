@@ -5,6 +5,7 @@ import {
   createEffect,
   For,
 } from "solid-js";
+import { Portal } from "solid-js/web";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import { formatSize, formatSpeed } from "../utils/format";
@@ -19,6 +20,36 @@ const TaskDetail: Component = () => {
   const [isEditing, setIsEditing] = createSignal(false);
   const [isExporting, setIsExporting] = createSignal(false);
   const [selectedIndices, setSelectedIndices] = createSignal<Set<number>>(new Set());
+  const [isShiftPressed, setIsShiftPressed] = createSignal(false);
+
+  createEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setIsShiftPressed(true);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setIsShiftPressed(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  });
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
+  const [forceDeleteChecked, setForceDeleteChecked] = createSignal(false);
+
+  const handleConfirmDelete = () => {
+    const gid = state.selectedTaskDetail!.gid;
+    if (forceDeleteChecked()) {
+      aria2Store.forceRemoveTask(gid);
+    } else {
+      aria2Store.removeTask(gid);
+    }
+    aria2Store.setSelectedTask(null);
+    setShowDeleteConfirm(false);
+  };
 
   // Fetch peers when tab changes to 'peers'
   createEffect(() => {
@@ -288,12 +319,21 @@ const TaskDetail: Component = () => {
             </button>
             <button
               onClick={() => {
-                aria2Store.removeTask(state.selectedTaskDetail!.gid);
-                aria2Store.setSelectedTask(null);
-              } }
-              class="btn btn-error btn-outline"
+                if (isShiftPressed()) {
+                  const gid = state.selectedTaskDetail!.gid;
+                  aria2Store.forceRemoveTask(gid);
+                  aria2Store.setSelectedTask(null);
+                } else {
+                  setForceDeleteChecked(false);
+                  setShowDeleteConfirm(true);
+                }
+              }}
+              class={`btn btn-error btn-outline transition-all ${
+                isShiftPressed() ? "bg-error text-error-content" : ""
+              }`}
+              title={isShiftPressed() ? "Force Delete Task (Shift-click)" : "Delete Task"}
             >
-              {t("common.delete")()}
+              {isShiftPressed() ? "Force Delete" : t("common.delete")()}
             </button>
           </div>
         </div>
@@ -314,6 +354,50 @@ const TaskDetail: Component = () => {
           onClose={() => setIsExporting(false)} 
           task={state.selectedTaskDetail} 
         />
+      </Show>
+
+      <Show when={showDeleteConfirm()}>
+        <Portal>
+          <div class="modal modal-open z-50">
+            <div class="modal-box w-11/12 max-w-md">
+              <h3 class="font-bold text-lg text-error mb-4">Confirm Delete</h3>
+              <p class="text-sm opacity-90">
+                Are you sure you want to delete this task?
+              </p>
+              
+              <div class="form-control mt-4">
+                <label class="label cursor-pointer justify-start gap-3">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-error checkbox-sm"
+                    checked={forceDeleteChecked()}
+                    onChange={(e) => setForceDeleteChecked(e.currentTarget.checked)}
+                  />
+                  <span class="label-text text-sm">Force delete immediately (skip tracker handshake)</span>
+                </label>
+              </div>
+
+              <div class="modal-action">
+                <button
+                  class="btn btn-sm btn-ghost"
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  class="btn btn-sm btn-error"
+                  onClick={handleConfirmDelete}
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </div>
+            <div
+              class="modal-backdrop bg-black/40"
+              onClick={() => setShowDeleteConfirm(false)}
+            ></div>
+          </div>
+        </Portal>
       </Show>
     </Show>
   );

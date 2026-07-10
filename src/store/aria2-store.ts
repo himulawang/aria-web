@@ -363,6 +363,17 @@ export const aria2Store = {
     }
   },
 
+  async forcePauseTask(gid: string) {
+    if (!client) await this.connect();
+    try {
+      await client!.request("aria2.forcePause", [gid]);
+      await this.fetchTasks();
+    } catch (e) {
+      logger.error(`Failed to force pause task: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
   async resumeTask(gid: string) {
     if (!client) await this.connect();
     try {
@@ -378,7 +389,7 @@ export const aria2Store = {
     if (!client) await this.connect();
     try {
       const task = state.tasks.find((t) => t.gid === gid);
-      const isActive = task?.status === "active" || task?.status === "waiting";
+      const isActive = task?.status === "active" || task?.status === "waiting" || task?.status === "paused";
 
       if (isActive) {
         await client!.request("aria2.remove", [gid]);
@@ -391,6 +402,60 @@ export const aria2Store = {
       this.fetchGlobalStat().catch(() => {});
     } catch (e) {
       logger.error(`Failed to remove task ${gid}: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async forceRemoveTask(gid: string) {
+    if (!client) await this.connect();
+    try {
+      const task = state.tasks.find((t) => t.gid === gid);
+      const isActive = task?.status === "active" || task?.status === "waiting" || task?.status === "paused";
+
+      if (isActive) {
+        await client!.request("aria2.forceRemove", [gid]);
+      } else {
+        await client!.request("aria2.removeDownloadResult", [gid]);
+      }
+
+      // Local UI update
+      setState("tasks", (tasks) => tasks.filter((t) => t.gid !== gid));
+      this.fetchGlobalStat().catch(() => {});
+    } catch (e) {
+      logger.error(`Failed to force remove task ${gid}: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async pauseAll() {
+    if (!client) await this.connect();
+    try {
+      await client!.request("aria2.pauseAll");
+      await this.fetchTasks();
+    } catch (e) {
+      logger.error(`Failed to pause all tasks: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async forcePauseAll() {
+    if (!client) await this.connect();
+    try {
+      await client!.request("aria2.forcePauseAll");
+      await this.fetchTasks();
+    } catch (e) {
+      logger.error(`Failed to force pause all tasks: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async resumeAll() {
+    if (!client) await this.connect();
+    try {
+      await client!.request("aria2.unpauseAll");
+      await this.fetchTasks();
+    } catch (e) {
+      logger.error(`Failed to resume all tasks: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },
@@ -468,6 +533,26 @@ export const aria2Store = {
       await client!.request("aria2.changeOption", [gid, options]);
     } catch (e) {
       logger.error(`Failed to change task options for ${gid}: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async changePosition(
+    gid: string,
+    pos: number,
+    how: "POS_SET" | "POS_CUR" | "POS_END",
+  ): Promise<number> {
+    if (!client) await this.connect();
+    try {
+      const newPos = await client!.request<number>("aria2.changePosition", [
+        gid,
+        pos,
+        how,
+      ]);
+      await this.fetchTasks();
+      return newPos;
+    } catch (e) {
+      logger.error(`Failed to change position for task ${gid}: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },

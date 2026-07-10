@@ -1,4 +1,4 @@
-import { For, createSignal, type Component, Show } from "solid-js";
+import { For, createSignal, type Component, Show, createEffect } from "solid-js";
 import { Portal } from "solid-js/web";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
@@ -9,6 +9,12 @@ import {
   HiOutlinePause,
   HiOutlineTrash,
   HiOutlinePlus,
+  HiOutlineChevronUp,
+  HiOutlineChevronDown,
+  HiOutlineChevronDoubleUp,
+  HiOutlineChevronDoubleDown,
+  HiOutlineForward,
+  HiOutlineXMark,
 } from "solid-icons/hi";
 
 const TaskList: Component = () => {
@@ -38,6 +44,60 @@ const TaskList: Component = () => {
   const [filter, setFilter] = createSignal<
     "all" | "active" | "waiting" | "stopped"
   >("active");
+  const [pendingGid, setPendingGid] = createSignal<string | null>(null);
+  const [isShiftPressed, setIsShiftPressed] = createSignal(false);
+
+  createEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setIsShiftPressed(true);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setIsShiftPressed(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  });
+
+  const [deleteConfirmTasks, setDeleteConfirmTasks] = createSignal<string[] | null>(null);
+  const [forceDeleteChecked, setForceDeleteChecked] = createSignal(false);
+
+  const handleConfirmDelete = async () => {
+    const gids = deleteConfirmTasks();
+    if (gids) {
+      for (const gid of gids) {
+        if (forceDeleteChecked()) {
+          await aria2Store.forceRemoveTask(gid);
+        } else {
+          await aria2Store.removeTask(gid);
+        }
+      }
+      setSelectedTasks((prev) => {
+        const next = new Set(prev);
+        gids.forEach((gid) => next.delete(gid));
+        return next;
+      });
+    }
+    setDeleteConfirmTasks(null);
+  };
+
+  const handleMove = async (
+    gid: string,
+    pos: number,
+    how: "POS_SET" | "POS_CUR" | "POS_END",
+  ) => {
+    setPendingGid(gid);
+    try {
+      await aria2Store.changePosition(gid, pos, how);
+    } catch (err) {
+      console.error("Failed to change task position:", err);
+    } finally {
+      setPendingGid(null);
+    }
+  };
 
   const toggleTask = (gid: string) => {
     const next = new Set(selectedTasks());
@@ -155,6 +215,50 @@ const TaskList: Component = () => {
         </Portal>
       </Show>
 
+      <Show when={deleteConfirmTasks() !== null}>
+        <Portal>
+          <div class="modal modal-open z-50">
+            <div class="modal-box w-11/12 max-w-md">
+              <h3 class="font-bold text-lg text-error mb-4">Confirm Delete</h3>
+              <p class="text-sm opacity-90">
+                Are you sure you want to delete {deleteConfirmTasks()?.length} selected task(s)?
+              </p>
+              
+              <div class="form-control mt-4">
+                <label class="label cursor-pointer justify-start gap-3">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-error checkbox-sm"
+                    checked={forceDeleteChecked()}
+                    onChange={(e) => setForceDeleteChecked(e.currentTarget.checked)}
+                  />
+                  <span class="label-text text-sm">Force delete immediately (skip tracker handshake)</span>
+                </label>
+              </div>
+
+              <div class="modal-action">
+                <button
+                  class="btn btn-sm btn-ghost"
+                  onClick={() => setDeleteConfirmTasks(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  class="btn btn-sm btn-error"
+                  onClick={handleConfirmDelete}
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </div>
+            <div
+              class="modal-backdrop bg-black/40"
+              onClick={() => setDeleteConfirmTasks(null)}
+            ></div>
+          </div>
+        </Portal>
+      </Show>
+
       
       <div class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
@@ -168,54 +272,129 @@ const TaskList: Component = () => {
           />
         </div>
         <div class="flex items-center gap-1">
-
-          <button
-            onClick={() => setIsModalOpen(true)}
-            class="btn btn-sm btn-ghost btn-square"
-            title={t("common.add")()}
+          <Show
+            when={selectedTasks().size > 0}
+            fallback={
+              <>
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  class="btn btn-sm btn-ghost btn-square"
+                  title={t("common.add")()}
+                >
+                  <HiOutlinePlus class="w-5 h-5" />
+                </button>
+                <button
+                  onClick={async () => {
+                    await aria2Store.resumeAll();
+                  }}
+                  class="btn btn-sm btn-ghost btn-square text-success"
+                  title="Resume All Tasks"
+                >
+                  <HiOutlineForward class="w-5 h-5" />
+                </button>
+                
+                {/* Global Pause Dropdown */}
+                <div class="dropdown dropdown-end">
+                  <div
+                    tabindex="0"
+                    role="button"
+                    class="btn btn-sm btn-ghost btn-square text-warning"
+                    title="Pause All Options"
+                  >
+                    <HiOutlinePause class="w-5 h-5" />
+                  </div>
+                  <ul
+                    tabindex="0"
+                    class="dropdown-content menu bg-base-100 rounded-box z-50 w-40 p-2 shadow-lg border border-base-200"
+                  >
+                    <li>
+                      <button
+                        onClick={async () => {
+                          await aria2Store.pauseAll();
+                        }}
+                        class="text-xs text-left"
+                      >
+                        Pause All
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={async () => {
+                          await aria2Store.forcePauseAll();
+                        }}
+                        class="text-xs text-left text-error font-medium"
+                      >
+                        Force Pause All
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </>
+            }
           >
-            <HiOutlinePlus class="w-5 h-5" />
-          </button>
-          <button
-            onClick={async () => {
-              for (const gid of selectedTasks()) {
-                await aria2Store.pauseTask(gid);
-              }
-              await aria2Store.fetchTasks();
-            }}
-            class="btn btn-sm btn-ghost btn-square"
-            title={t("task-detail.pause")()}
-            disabled={selectedTasks().size === 0 || !hasActiveTasks()}
-          >
-            <HiOutlinePause class="w-5 h-5" />
-          </button>
-          <button
-            onClick={async () => {
-              for (const gid of selectedTasks()) {
-                await aria2Store.resumeTask(gid);
-              }
-              await aria2Store.fetchTasks();
-            }}
-            class="btn btn-sm btn-ghost btn-square"
-            title={t("task-detail.resume")()}
-            disabled={selectedTasks().size === 0 || !hasNonCompletedTasks()}
-          >
-            <HiOutlinePlay class="w-5 h-5" />
-          </button>
-          <button
-            onClick={async () => {
-              for (const gid of selectedTasks()) {
-                await aria2Store.removeTask(gid);
-              }
-              setSelectedTasks(new Set<string>());
-              await aria2Store.fetchTasks();
-            }}
-            class="btn btn-sm btn-ghost btn-square text-error"
-            title={t("common.delete")()}
-            disabled={selectedTasks().size === 0}
-          >
-            <HiOutlineTrash class="w-5 h-5" />
-          </button>
+            <span class="text-xs font-semibold px-2 py-1 bg-base-300 rounded-lg flex items-center gap-1 mr-1">
+              {selectedTasks().size} Selected
+              <button
+                onClick={() => setSelectedTasks(new Set<string>())}
+                class="btn btn-xs btn-ghost btn-circle text-opacity-50 hover:text-opacity-100 p-0 h-4 w-4 min-h-0"
+                title="Clear Selection"
+              >
+                <HiOutlineXMark class="w-3 h-3" />
+              </button>
+            </span>
+            <button
+              onClick={async () => {
+                for (const gid of selectedTasks()) {
+                  if (isShiftPressed()) {
+                    await aria2Store.forcePauseTask(gid);
+                  } else {
+                    await aria2Store.pauseTask(gid);
+                  }
+                }
+                await aria2Store.fetchTasks();
+              }}
+              class={`btn btn-sm btn-ghost btn-square transition-all ${
+                isShiftPressed() ? "text-warning border border-warning/30 bg-warning/5" : ""
+              }`}
+              title={isShiftPressed() ? "Force Pause Selected (Shift-click)" : t("task-detail.pause")()}
+              disabled={!hasActiveTasks()}
+            >
+              <HiOutlinePause class="w-5 h-5" />
+            </button>
+            <button
+              onClick={async () => {
+                for (const gid of selectedTasks()) {
+                  await aria2Store.resumeTask(gid);
+                }
+                await aria2Store.fetchTasks();
+              }}
+              class="btn btn-sm btn-ghost btn-square"
+              title={t("task-detail.resume")()}
+              disabled={!hasNonCompletedTasks()}
+            >
+              <HiOutlinePlay class="w-5 h-5" />
+            </button>
+            <button
+              onClick={async () => {
+                if (isShiftPressed()) {
+                  for (const gid of selectedTasks()) {
+                    await aria2Store.forceRemoveTask(gid);
+                  }
+                  setSelectedTasks(new Set<string>());
+                  await aria2Store.fetchTasks();
+                } else {
+                  setForceDeleteChecked(false);
+                  setDeleteConfirmTasks(Array.from(selectedTasks()));
+                }
+              }}
+              class={`btn btn-sm btn-ghost btn-square text-error transition-all ${
+                isShiftPressed() ? "border border-error/30 bg-error/5 animate-pulse" : ""
+              }`}
+              title={isShiftPressed() ? "Force Delete Selected (Shift-click)" : t("common.delete")()}
+            >
+              <HiOutlineTrash class="w-5 h-5" />
+            </button>
+          </Show>
         </div>
       </div>
 
@@ -260,9 +439,9 @@ const TaskList: Component = () => {
                       aria2Store.setSelectedTask(task.gid);
                     }
                   }}
-                  class={`hover cursor-pointer ${
+                  class={`hover cursor-pointer transition-all duration-300 ${
                     state.selectedTaskId === task.gid ? "bg-base-200" : ""
-                  }`}
+                  } ${pendingGid() === task.gid ? "opacity-50 animate-pulse bg-primary/10" : ""}`}
                   style="min-height: 32px;"
                 >
                   <td class="p-2">
@@ -316,6 +495,54 @@ const TaskList: Component = () => {
                   </td>
                   <td class="p-2 text-right">
                     <div class="flex items-center justify-end gap-2">
+                      <Show when={task.status === "paused" || task.status === "waiting"}>
+                        <div class="flex items-center gap-0.5 mr-2">
+                          <button
+                            title="Move to Top"
+                            class="btn btn-xs btn-ghost btn-square"
+                            disabled={pendingGid() !== null}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMove(task.gid, 0, "POS_SET");
+                            }}
+                          >
+                            <HiOutlineChevronDoubleUp class="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            title="Move Up"
+                            class="btn btn-xs btn-ghost btn-square"
+                            disabled={pendingGid() !== null}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMove(task.gid, -1, "POS_CUR");
+                            }}
+                          >
+                            <HiOutlineChevronUp class="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            title="Move Down"
+                            class="btn btn-xs btn-ghost btn-square"
+                            disabled={pendingGid() !== null}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMove(task.gid, 1, "POS_CUR");
+                            }}
+                          >
+                            <HiOutlineChevronDown class="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            title="Move to Bottom"
+                            class="btn btn-xs btn-ghost btn-square"
+                            disabled={pendingGid() !== null}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMove(task.gid, 0, "POS_END");
+                            }}
+                          >
+                            <HiOutlineChevronDoubleDown class="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </Show>
                       <Show when={task.status === "active"}>
                         <span class="text-xs opacity-50">
                           {formatSpeed(Number(task.downloadSpeed))}
