@@ -4,6 +4,7 @@ import { notificationStore } from "../store/notification-store";
 import { t } from "../i18n";
 import { aria2AllOptions } from "../config/aria2-options";
 import { aria2GlobalAvailableOptions } from "../config/aria2-available-options";
+import { settingsHistory } from "../utils/settings-history";
 import SettingItem from "./SettingItem";
 
 interface ConnectionSettingsProps {
@@ -18,6 +19,7 @@ const ConnectionSettings: Component<ConnectionSettingsProps> = (props) => {
     setOptionValues({ ...optionValues(), [name]: value });
     try {
       await aria2Store.changeGlobalOption(name, value);
+      await settingsHistory.addHistory(name, String(value));
       notificationStore.add(`Updated ${name}`, "success");
     } catch (e) {
       notificationStore.add(`Failed to update ${name}`, "error");
@@ -68,6 +70,7 @@ const ConnectionSettings: Component<ConnectionSettingsProps> = (props) => {
                       <SettingItem 
                         optName={optName} 
                         opt={opt} 
+                        value={() => optionValues()[optName]}
                         onUpdate={updateOption} 
                       />
                     );

@@ -1,33 +1,25 @@
 import { type Component, Show, For } from "solid-js";
-import { notificationStore } from "../store/notification-store";
 import { aria2Store } from "../store";
-import { settingsHistory } from "../utils/settings-history";
 
 interface SettingItemProps {
   optName: string;
   opt: any;
+  value: () => any;
   onUpdate?: (name: string, value: any) => void;
 }
 
 const SettingItem: Component<SettingItemProps> = (props) => {
-  const value = () => {
-    // This is a simplified way to get the current value. 
-    // In a real app, we'd probably use a store.
-    return (aria2Store.getState() as any).optionValues?.[props.optName];
-  };
-
   const handleUpdate = async (newValue: any) => {
-    const oldValue = value();
     try {
       if (props.onUpdate) {
         await props.onUpdate(props.optName, newValue);
       } else {
         await aria2Store.changeGlobalOption(props.optName, newValue);
       }
-      await settingsHistory.addHistory(props.optName, String(newValue));
-      notificationStore.add(`Updated ${props.optName}`, "success");
     } catch (e) {
-      notificationStore.add(`Failed to update ${props.optName}`, "error");
+      // If there's no onUpdate, we might want a fallback notification here, 
+      // but usually the parent should handle it.
+      throw e;
     }
   };
 
@@ -56,7 +48,7 @@ const SettingItem: Component<SettingItemProps> = (props) => {
                 <input
                   type="checkbox"
                   class="toggle toggle-sm toggle-primary"
-                  checked={String(value()) === "true"}
+                  checked={String(props.value()) === "true"}
                   onChange={(e) => handleUpdate(String(e.currentTarget.checked))}
                 />
               );
@@ -66,7 +58,7 @@ const SettingItem: Component<SettingItemProps> = (props) => {
                 <input
                   type="number"
                   class="input input-bordered input-sm w-24"
-                  value={value()}
+                  value={props.value()}
                   onInput={(e) => handleUpdate(parseInt(e.currentTarget.value, 10))}
                 />
               );
@@ -74,7 +66,7 @@ const SettingItem: Component<SettingItemProps> = (props) => {
               return (
                 <select
                   class="select select-bordered select-sm w-32"
-                  value={String(value() ?? "")}
+                  value={String(props.value() ?? "")}
                   onChange={(e) => handleUpdate(e.currentTarget.value)}
                 >
                   <For each={props.opt.options || []}>
@@ -87,7 +79,7 @@ const SettingItem: Component<SettingItemProps> = (props) => {
                 <input
                   type="text"
                   class="input input-bordered input-sm w-32"
-                  value={String(value() ?? "")}
+                  value={String(props.value() ?? "")}
                   onInput={(e) => handleUpdate(e.currentTarget.value)}
                 />
               );
