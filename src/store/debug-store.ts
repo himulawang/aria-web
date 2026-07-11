@@ -4,6 +4,7 @@ export interface DebugLog {
   id: number;
   time: Date;
   level: "DEBUG" | "INFO" | "WARN" | "ERROR";
+  head: string;
   content: string;
   attachment?: any;
 }
@@ -44,13 +45,14 @@ export const debugStore = {
     setState("logs", []);
   },
 
-  addLog(level: "DEBUG" | "INFO" | "WARN" | "ERROR", msg: string, obj?: any) {
+  addLog(level: "DEBUG" | "INFO" | "WARN" | "ERROR", head: string, msg: string, obj?: any) {
     if (!state.enableDebugLog) return;
 
     const newLog: DebugLog = {
       id: ++logIndex,
       time: new Date(),
       level,
+      head,
       content: msg,
       attachment: obj,
     };

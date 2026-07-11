@@ -4,28 +4,44 @@ const CURRENT_LOG_LEVEL = LOG_LEVELS.INFO;
 import { debugStore } from "../store/debug-store";
 
 export const logger = {
-    debug: (msg: string, context = "App") => {
-        if (CURRENT_LOG_LEVEL <= LOG_LEVELS.DEBUG) {
-            console.debug(`[${context}] ${msg}`);
-        }
-        debugStore.addLog("DEBUG", `[${context}] ${msg}`);
+    debug: (msg: string | (() => string), context = "App") => {
+        const isConsole = CURRENT_LOG_LEVEL <= LOG_LEVELS.DEBUG;
+        const isStore = debugStore.getState().enableDebugLog;
+        if (!isConsole && !isStore) return;
+
+        const val = typeof msg === "function" ? msg() : msg;
+        const formatted = `[${context}] ${val}`;
+        if (isConsole) console.debug(formatted);
+        if (isStore) debugStore.addLog("DEBUG", context, val);
     },
-    info: (msg: string, context = "App") => {
-        if (CURRENT_LOG_LEVEL <= LOG_LEVELS.INFO) {
-            console.info(`[${context}] ${msg}`);
-        }
-        debugStore.addLog("INFO", `[${context}] ${msg}`);
+    info: (msg: string | (() => string), context = "App") => {
+        const isConsole = CURRENT_LOG_LEVEL <= LOG_LEVELS.INFO;
+        const isStore = debugStore.getState().enableDebugLog;
+        if (!isConsole && !isStore) return;
+
+        const val = typeof msg === "function" ? msg() : msg;
+        const formatted = `[${context}] ${val}`;
+        if (isConsole) console.info(formatted);
+        if (isStore) debugStore.addLog("INFO", context, val);
     },
-    warn: (msg: string, context = "App") => {
-        if (CURRENT_LOG_LEVEL <= LOG_LEVELS.WARN) {
-            console.warn(`[${context}] ${msg}`);
-        }
-        debugStore.addLog("WARN", `[${context}] ${msg}`);
+    warn: (msg: string | (() => string), context = "App") => {
+        const isConsole = CURRENT_LOG_LEVEL <= LOG_LEVELS.WARN;
+        const isStore = debugStore.getState().enableDebugLog;
+        if (!isConsole && !isStore) return;
+
+        const val = typeof msg === "function" ? msg() : msg;
+        const formatted = `[${context}] ${val}`;
+        if (isConsole) console.warn(formatted);
+        if (isStore) debugStore.addLog("WARN", context, val);
     },
-    error: (msg: string, context = "App") => {
-        if (CURRENT_LOG_LEVEL <= LOG_LEVELS.ERROR) {
-            console.error(`[${context}] ${msg}`);
-        }
-        debugStore.addLog("ERROR", `[${context}] ${msg}`);
+    error: (msg: string | (() => string), context = "App") => {
+        const isConsole = CURRENT_LOG_LEVEL <= LOG_LEVELS.ERROR;
+        const isStore = debugStore.getState().enableDebugLog;
+        if (!isConsole && !isStore) return;
+
+        const val = typeof msg === "function" ? msg() : msg;
+        const formatted = `[${context}] ${val}`;
+        if (isConsole) console.error(formatted);
+        if (isStore) debugStore.addLog("ERROR", context, val);
     },
 };

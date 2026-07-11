@@ -273,6 +273,58 @@ export const aria2Store = {
     }
   },
 
+  async updateActiveTasksOnly() {
+    if (!client) await this.connect();
+    try {
+      const [active, stat] = await Promise.all([
+        client!.request<any[]>("aria2.tellActive", []),
+        client!.request<GlobalStat>("aria2.getGlobalStat"),
+      ]);
+
+      setState("globalStat", stat);
+
+      const activeTasks = active.filter(
+        (task) =>
+          task &&
+          typeof task === "object" &&
+          "gid" in task &&
+          !hiddenGids.has(task.gid),
+      );
+
+      const activeGids = new Set(activeTasks.map((t) => t.gid));
+
+      let needsFullSync = false;
+      for (const task of state.tasks) {
+        if (task.status === "active" && !activeGids.has(task.gid)) {
+          needsFullSync = true;
+          break;
+        }
+      }
+
+      if (needsFullSync) {
+        logger.info("Active task list changed. Triggering full sync...", LOG_CONTEXT);
+        await this.fetchTasks();
+        return;
+      }
+
+      setState("tasks", (prev) => {
+        const next = [...prev];
+        activeTasks.forEach((incoming) => {
+          const index = next.findIndex((t) => t.gid === incoming.gid);
+          if (index !== -1) {
+            next[index] = { ...next[index], ...incoming };
+          } else {
+            next.unshift(incoming);
+          }
+        });
+        return next;
+      });
+    } catch (e) {
+      logger.error(`Failed to update active tasks: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
   async fetchTasks() {
     if (!client) await this.connect();
     try {
@@ -821,22 +873,29 @@ export const aria2Store = {
 
   startPolling() {
     if (pollingTimer) return;
+    let pollTicks = 0;
     pollingTimer = setInterval(async () => {
       if (state.connectionStatus !== "connected" || !client) return;
       try {
-        // Use verified fetch methods to ensure store is updated correctly
-        const promises = [
-          this.fetchTasks(),
-          this.fetchGlobalStat(),
-        ];
+        pollTicks++;
+        const promises: Promise<any>[] = [];
+
+        // Every 15 ticks (30 seconds), perform a full sync. Otherwise, only update active tasks.
+        if (pollTicks % 15 === 0) {
+          promises.push(this.fetchTasks());
+          promises.push(this.fetchGlobalStat());
+        } else {
+          promises.push(this.updateActiveTasksOnly());
+        }
+
         if (state.selectedTaskId && state.selectedTaskDetail) {
           promises.push(this.fetchTaskDetail(state.selectedTaskId));
         }
+
         await Promise.all(promises);
 
         // Update isDownloading based on current tasks
-        const active = await client!.request<any[]>("aria2.tellActive", []);
-        const hasActiveTasks = active && active.length > 0;
+        const hasActiveTasks = state.tasks.some((t) => t.status === "active");
 
         if (hasActiveTasks !== state.isDownloading) {
           setState("isDownloading", hasActiveTasks);

@@ -94,7 +94,7 @@ export class WebSocketRpcClient {
   private handleMessage(data: string) {
     try {
       const response: RpcResponse | RpcNotification = JSON.parse(data);
-      logger.debug(`Received: ${JSON.stringify(response)}`, LOG_CONTEXT);
+      logger.debug(() => `Received: ${JSON.stringify(response)}`, LOG_CONTEXT);
 
       if ("id" in response) {
         const pending = this.pendingRequests.get(response.id);
