@@ -568,10 +568,14 @@ export const aria2Store = {
     }
   },
 
-  async ed2kSearch(keyword: string): Promise<string> {
+  async ed2kSearch(keyword: string, options?: Record<string, any>): Promise<string> {
     if (!client) await this.connect();
     try {
-      return await client!.request<string>("aria2.ed2kSearch", [keyword]);
+      const params: any[] = [keyword];
+      if (options) {
+        params.push(options);
+      }
+      return await client!.request<string>("aria2.ed2kSearch", params);
     } catch (e) {
       logger.error(`Failed to execute ED2K search for keyword '${keyword}': ${e}`, LOG_CONTEXT);
       throw e;

@@ -28,6 +28,10 @@ const Ed2kSearch: Component = () => {
   const [fileType, setFileType] = createSignal<"all" | "video" | "audio" | "archive" | "document">("all");
   const [sortBy, setSortBy] = createSignal<"relevance" | "size" | "sources">("relevance");
   const [currentPage, setCurrentPage] = createSignal(1);
+  const [showAdvanced, setShowAdvanced] = createSignal(false);
+  const [ed2kServers, setEd2kServers] = createSignal(
+    "176.103.56.135:2442,176.103.48.37:4232,91.208.162.87:4232,195.154.83.5:7111,45.142.215.111:4232"
+  );
 
   let currentSearchGid: string | null = null;
   let pollInterval: any = null;
@@ -165,7 +169,18 @@ const Ed2kSearch: Component = () => {
     setMoreResultsPending(false);
 
     try {
-      const gid = await aria2Store.ed2kSearch(query);
+      const options: Record<string, any> = {};
+      if (ed2kServers().trim()) {
+        options["ed2k-server"] = ed2kServers().trim();
+      }
+
+      // Map fileType filter on search trigger
+      const activeType = fileType();
+      if (activeType !== "all") {
+        options["fileType"] = activeType === "document" ? "doc" : activeType;
+      }
+
+      const gid = await aria2Store.ed2kSearch(query, options);
       if (gid) {
         currentSearchGid = gid;
         // Hide this GID from the task list immediately
@@ -265,14 +280,43 @@ const Ed2kSearch: Component = () => {
           />
           <HiOutlineMagnifyingGlass class="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-50" />
         </div>
-        <button
-          type="submit"
-          class="btn btn-primary"
-          disabled={searching() || !keyword().trim()}
-        >
-          {searching() ? "Searching..." : "Search"}
-        </button>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class={`btn ${showAdvanced() ? "btn-active" : "btn-outline btn-ghost"}`}
+            onClick={() => setShowAdvanced(!showAdvanced())}
+          >
+            Servers
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            disabled={searching() || !keyword().trim()}
+          >
+            {searching() ? "Searching..." : "Search"}
+          </button>
+        </div>
       </form>
+
+      {/* Advanced Options Collapse */}
+      <Show when={showAdvanced()}>
+        <div class="p-4 bg-base-100 border border-base-300 rounded-xl space-y-3">
+          <div>
+            <label class="label py-1 text-xs font-semibold opacity-75">
+              ED2K eMule Server List (comma-separated HOST:PORT)
+            </label>
+            <textarea
+              class="textarea textarea-bordered w-full text-xs font-mono h-20"
+              placeholder="e.g. 176.103.56.135:2442,176.103.48.37:4232"
+              value={ed2kServers()}
+              onInput={(e) => setEd2kServers(e.currentTarget.value)}
+            />
+            <p class="text-[10px] opacity-50 mt-1">
+              Note: Since your aria2-next server runs in a standalone container, you must pass active ED2K servers to connect to. We pre-populated standard ones.
+            </p>
+          </div>
+        </div>
+      </Show>
 
       {/* Filter and Sort bar */}
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-base-100 p-4 rounded-xl border border-base-300">

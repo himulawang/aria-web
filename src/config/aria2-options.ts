@@ -246,6 +246,13 @@ export const aria2AllOptions: Record<string, Aria2Option> = {
         required: true,
         min: 1,
     },
+    stderr: {
+        name: "stderr",
+        description: "Redirect all console output that would be otherwise printed in stdout to stderr.",
+        type: "boolean",
+        defaultValue: false,
+        readonly: true,
+    },
     "stream-piece-selector": {
         name: "stream-piece-selector",
         description: "Set the selector for streaming pieces.",
@@ -618,6 +625,20 @@ export const aria2AllOptions: Record<string, Aria2Option> = {
         required: true,
         min: 1,
     },
+    "dht-entry-point": {
+        name: "dht-entry-point",
+        description: "Set host and port as an entry point to IPv4 DHT network.",
+        type: "string",
+        pattern: "HOST:PORT",
+        readonly: true,
+    },
+    "dht-entry-point6": {
+        name: "dht-entry-point6",
+        description: "Set host and port as an entry point to IPv6 DHT network.",
+        type: "string",
+        pattern: "HOST:PORT",
+        readonly: true,
+    },
     "dht-file-path": {
         name: "dht-file-path",
         description: "Set the DHT file path.",
@@ -903,6 +924,12 @@ export const aria2AllOptions: Record<string, Aria2Option> = {
         type: "boolean",
         readonly: true,
     },
+    "detach-share-only": {
+        name: "detach-share-only",
+        description: "Exclude share-only P2P downloads when counting concurrent active downloads.",
+        type: "boolean",
+        defaultValue: false,
+    },
     "disable-ipv6": {
         name: "disable-ipv6",
         description: "Disable IPv6.",
@@ -929,6 +956,27 @@ export const aria2AllOptions: Record<string, Aria2Option> = {
         description: "Set the DSCP.",
         type: "number",
         readonly: true,
+    },
+    "ed2k-listen-port": {
+        name: "ed2k-listen-port",
+        description: "Set TCP port number for incoming ED2K peer connections.",
+        type: "number",
+        defaultValue: 4662,
+        readonly: true,
+    },
+    "ed2k-udp-listen-port": {
+        name: "ed2k-udp-listen-port",
+        description: "Set UDP port number for ED2K Kad and peer reask packets.",
+        type: "number",
+        defaultValue: 4672,
+        readonly: true,
+    },
+    "ed2k-upload-slots": {
+        name: "ed2k-upload-slots",
+        description: "Set the maximum number of active ED2K upload slots.",
+        type: "number",
+        defaultValue: 3,
+        min: 1,
     },
     "rlimit-nofile": {
         name: "rlimit-nofile",
@@ -985,6 +1033,13 @@ export const aria2AllOptions: Record<string, Aria2Option> = {
         type: "boolean",
         defaultValue: false,
         required: true,
+    },
+    help: {
+        name: "help",
+        description: "The help messages classified with tags.",
+        type: "string",
+        defaultValue: "#basic",
+        readonly: true,
     },
     "human-readable": {
         name: "human-readable",
@@ -1101,6 +1156,12 @@ export const aria2AllOptions: Record<string, Aria2Option> = {
         defaultValue: "5M",
         required: true,
         pattern: "SIZE",
+    },
+    "no-want-digest-header": {
+        name: "no-want-digest-header",
+        description: "Whether to disable Want-Digest header when doing requests.",
+        type: "boolean",
+        defaultValue: false,
     },
     "parameterized-uri": {
         name: "parameterized-uri",
