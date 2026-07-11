@@ -88,7 +88,7 @@ const App: Component = () => {
         ) : view() === "debug" ? (
           <DebugView />
         ) : (
-          <div class="h-full overflow-y-auto">
+          <div class="h-full">
             <TaskList />
           </div>
         )}

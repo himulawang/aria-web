@@ -313,7 +313,9 @@ export const aria2Store = {
     if (!client) await this.connect();
     try {
       const detail = await client!.request<any>("aria2.tellStatus", [gid]);
-      setState("selectedTaskDetail", detail);
+      if (state.selectedTaskId === gid) {
+        setState("selectedTaskDetail", detail);
+      }
       return detail;
     } catch (e: any) {
       if (e.message?.includes("No peer data is available")) {
@@ -660,6 +662,30 @@ export const aria2Store = {
     }
   },
 
+  async changePositions(
+    gids: string[],
+    pos: number,
+    how: "POS_SET" | "POS_CUR" | "POS_END",
+  ): Promise<void> {
+    if (!client) await this.connect();
+    // To preserve relative order of moved tasks:
+    // If moving to top (POS_SET), reverse GIDs list so the first checked task remains first
+    const targetGids = how === "POS_SET" ? [...gids].reverse() : [...gids];
+    try {
+      for (const gid of targetGids) {
+        await client!.request<number>("aria2.changePosition", [
+          gid,
+          pos,
+          how,
+        ]);
+      }
+      await this.fetchTasks();
+    } catch (e) {
+      logger.error(`Failed to change positions for tasks: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
   async getAllGlobalOptions() {
     if (!client) await this.connect();
     try {
@@ -755,13 +781,16 @@ export const aria2Store = {
 
   setSelectedTask(gid: string | null) {
     setState("selectedTaskId", gid);
-    if (gid) {
-      this.fetchTaskDetail(gid).catch((err) =>
-        logger.error(`Error in setSelectedTask: ${err}`, LOG_CONTEXT),
-      );
-    } else {
+    if (!gid) {
       setState("selectedTaskDetail", null);
     }
+  },
+
+  showTaskDetail(gid: string) {
+    setState("selectedTaskId", gid);
+    this.fetchTaskDetail(gid).catch((err) =>
+      logger.error(`Error in showTaskDetail: ${err}`, LOG_CONTEXT),
+    );
   },
 
   async setAppSettings(settings: Record<string, any>) {
@@ -796,10 +825,14 @@ export const aria2Store = {
       if (state.connectionStatus !== "connected" || !client) return;
       try {
         // Use verified fetch methods to ensure store is updated correctly
-        await Promise.all([
+        const promises = [
           this.fetchTasks(),
           this.fetchGlobalStat(),
-        ]);
+        ];
+        if (state.selectedTaskId && state.selectedTaskDetail) {
+          promises.push(this.fetchTaskDetail(state.selectedTaskId));
+        }
+        await Promise.all(promises);
 
         // Update isDownloading based on current tasks
         const active = await client!.request<any[]>("aria2.tellActive", []);
@@ -832,9 +865,11 @@ export const aria2Store = {
       // Skip hidden GIDs (e.g. ED2K search tasks — they are not real downloads)
       if (hiddenGids.has(gid)) return;
       setState("isDownloading", true);
-      this.fetchTaskDetail(gid).catch((err) =>
-        logger.error(`Error in onDownloadStart: ${err}`, LOG_CONTEXT),
-      );
+      if (state.selectedTaskId === gid) {
+        this.fetchTaskDetail(gid).catch((err) =>
+          logger.error(`Error in onDownloadStart: ${err}`, LOG_CONTEXT),
+        );
+      }
       this.fetchGlobalStat().catch((err) =>
         logger.error(
           `Error fetching global stat on start: ${err}`,
@@ -877,9 +912,11 @@ export const aria2Store = {
       if (hiddenGids.has(gid)) return;
       setState("tasks", (t) => t.gid === gid, { status: "complete" });
       setTimeout(() => {
-        this.fetchTaskDetail(gid).catch((err) =>
-          logger.warn(`Deferred fetch failed for ${gid}: ${err}`, LOG_CONTEXT),
-        );
+        if (state.selectedTaskId === gid) {
+          this.fetchTaskDetail(gid).catch((err) =>
+            logger.warn(`Deferred fetch failed for ${gid}: ${err}`, LOG_CONTEXT),
+          );
+        }
         this.fetchTasks();
       }, 500);
       notificationStore.add(`Task ${gid} completed successfully`, "success", `Download Completed`);

@@ -14,6 +14,7 @@ import { formatSize, formatSpeed } from "../utils/format";
 import { parsePeerId, calculatePeerProgress } from "../utils/peer";
 import TaskEditDialog from "./TaskEditDialog";
 import ExportCommandDialog from "./ExportCommandDialog";
+import { HiOutlineXMark } from "solid-icons/hi";
 
 const TaskDetail: Component = () => {
   const state = aria2Store.getState();
@@ -211,16 +212,25 @@ const TaskDetail: Component = () => {
       >
         <div class="space-y-6">
           <div class="flex items-center justify-between">
-            <h2 class="text-xl font-bold">{t("task-detail.title")()}</h2>
-            <div
-              class={`badge ${
-                state.selectedTaskDetail?.status === "active"
-                  ? "badge-primary"
-                  : "badge-ghost"
-              }`}
-            >
-              {t(`task-status.${state.selectedTaskDetail?.status}`)()}
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl font-bold">{t("task-detail.title")()}</h2>
+              <div
+                class={`badge ${
+                  state.selectedTaskDetail?.status === "active"
+                    ? "badge-primary"
+                    : "badge-ghost"
+                }`}
+              >
+                {t(`task-status.${state.selectedTaskDetail?.status}`)()}
+              </div>
             </div>
+            <button
+              onClick={() => aria2Store.setSelectedTask(null)}
+              class="btn btn-sm btn-ghost btn-circle"
+              title={t("common.close")() || "Close"}
+            >
+              <HiOutlineXMark class="w-5 h-5" />
+            </button>
           </div>
 
           <div class="tabs tabs-boxed">

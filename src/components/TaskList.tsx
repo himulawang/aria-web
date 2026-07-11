@@ -15,6 +15,7 @@ import {
   HiOutlineChevronDoubleDown,
   HiOutlineForward,
   HiOutlineXMark,
+  HiOutlineInformationCircle,
 } from "solid-icons/hi";
 
 const TaskList: Component = () => {
@@ -24,6 +25,8 @@ const TaskList: Component = () => {
         return "badge-primary";
       case "paused":
         return "badge-warning";
+      case "waiting":
+        return "badge-info";
       case "complete":
         return "badge-success";
       case "error":
@@ -44,7 +47,6 @@ const TaskList: Component = () => {
   const [filter, setFilter] = createSignal<
     "all" | "active" | "waiting" | "stopped"
   >("active");
-  const [pendingGid, setPendingGid] = createSignal<string | null>(null);
   const [isShiftPressed, setIsShiftPressed] = createSignal(false);
 
   createEffect(() => {
@@ -61,6 +63,88 @@ const TaskList: Component = () => {
       window.removeEventListener("keyup", handleKeyUp);
     };
   });
+
+  const [isDragging, setIsDragging] = createSignal(false);
+  const [dragStart, setDragStart] = createSignal({ x: 0, y: 0 });
+  const [dragEnd, setDragEnd] = createSignal({ x: 0, y: 0 });
+  let containerRef: HTMLDivElement | undefined;
+
+  const handleMouseDown = (e: MouseEvent) => {
+    if (e.button !== 0) return;
+    
+    const target = e.target as HTMLElement;
+    if (target.closest("button, input, a, select, textarea, [role='button']")) {
+      return;
+    }
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initialSelected = new Set(selectedTasks());
+    let dragActive = false;
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const currentX = moveEvent.clientX;
+      const currentY = moveEvent.clientY;
+      
+      if (!dragActive) {
+        const dist = Math.hypot(currentX - startX, currentY - startY);
+        if (dist > 5) {
+          dragActive = true;
+          setIsDragging(true);
+          setDragStart({ x: startX, y: startY });
+        }
+      }
+      
+      if (dragActive) {
+        setDragEnd({ x: currentX, y: currentY });
+        
+        const x1 = Math.min(startX, currentX);
+        const y1 = Math.min(startY, currentY);
+        const x2 = Math.max(startX, currentX);
+        const y2 = Math.max(startY, currentY);
+        
+        const newSelected = new Set(initialSelected);
+        
+        const rows = containerRef?.querySelectorAll("tr[data-gid]");
+        if (rows) {
+          rows.forEach((rowEl) => {
+            const gid = rowEl.getAttribute("data-gid");
+            if (!gid) return;
+            
+            const rect = rowEl.getBoundingClientRect();
+            const intersects = rect.left < x2 && rect.right > x1 && rect.top < y2 && rect.bottom > y1;
+            
+            if (intersects) {
+              if (initialSelected.has(gid)) {
+                newSelected.delete(gid);
+              } else {
+                newSelected.add(gid);
+              }
+            } else {
+              if (initialSelected.has(gid)) {
+                newSelected.add(gid);
+              } else {
+                newSelected.delete(gid);
+              }
+            }
+          });
+        }
+        
+        setSelectedTasks(newSelected);
+      }
+    };
+    
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (dragActive) {
+        setIsDragging(false);
+      }
+    };
+    
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
 
   const [deleteConfirmTasks, setDeleteConfirmTasks] = createSignal<string[] | null>(null);
   const [forceDeleteChecked, setForceDeleteChecked] = createSignal(false);
@@ -84,20 +168,7 @@ const TaskList: Component = () => {
     setDeleteConfirmTasks(null);
   };
 
-  const handleMove = async (
-    gid: string,
-    pos: number,
-    how: "POS_SET" | "POS_CUR" | "POS_END",
-  ) => {
-    setPendingGid(gid);
-    try {
-      await aria2Store.changePosition(gid, pos, how);
-    } catch (err) {
-      console.error("Failed to change task position:", err);
-    } finally {
-      setPendingGid(null);
-    }
-  };
+
 
   const toggleTask = (gid: string) => {
     const next = new Set(selectedTasks());
@@ -137,6 +208,13 @@ const TaskList: Component = () => {
         state.tasks.find((t) => t.gid === gid)?.status !== "error",
     );
 
+  const getMovableGids = () => {
+    return Array.from(selectedTasks()).filter((gid) => {
+      const task = state.tasks.find((t) => t.gid === gid);
+      return task && (task.status === "paused" || task.status === "waiting");
+    });
+  };
+
   
   const filteredTasks = () => {
     const tasks = state.tasks;
@@ -145,18 +223,35 @@ const TaskList: Component = () => {
     if (filter() === "active") {
       result = tasks.filter((t) => t.status === "active");
     } else if (filter() === "waiting") {
-      result = tasks.filter((t) => t.status === "paused");
+      result = tasks.filter((t) => t.status === "paused" || t.status === "waiting");
     } else if (filter() === "stopped") {
       result = tasks.filter((t) => t.status === "complete" || t.status === "error");
     } else if (filter() === "all") {
       result = tasks;
     }
 
-    const query = searchQuery().toLowerCase();
+    const query = searchQuery().trim();
     if (query) {
+      let isMatch: (val: string) => boolean;
+      if (query.includes("*") || query.includes("?")) {
+        const escaped = query.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+        const regexStr = escaped.replace(/\*/g, '.*').replace(/\?/g, '.');
+        try {
+          const regex = new RegExp(`^${regexStr}$`, "i");
+          isMatch = (val: string) => regex.test(val);
+        } catch (err) {
+          const lowerQuery = query.toLowerCase();
+          isMatch = (val: string) => val.toLowerCase().includes(lowerQuery);
+        }
+      } else {
+        const lowerQuery = query.toLowerCase();
+        isMatch = (val: string) => val.toLowerCase().includes(lowerQuery);
+      }
+
       result = result.filter((t) => {
         const name = t.files[0]?.path?.split("/").pop() || "";
-        return name.toLowerCase().includes(query);
+        const directory = t.dir || "";
+        return isMatch(name) || isMatch(directory);
       });
     }
 
@@ -199,7 +294,29 @@ const TaskList: Component = () => {
   };
 
   return (
-    <div class="space-y-4">
+    <div
+      ref={containerRef}
+      class={`flex flex-col h-full space-y-4 ${isDragging() ? "select-none" : ""}`}
+      onMouseDown={handleMouseDown}
+    >
+      <Show when={isDragging()}>
+        <Portal>
+          <div
+            style={{
+              position: "fixed",
+              left: `${Math.min(dragStart().x, dragEnd().x)}px`,
+              top: `${Math.min(dragStart().y, dragEnd().y)}px`,
+              width: `${Math.abs(dragStart().x - dragEnd().x)}px`,
+              height: `${Math.abs(dragStart().y - dragEnd().y)}px`,
+              "background-color": "rgba(59, 130, 246, 0.15)",
+              border: "1px solid rgba(59, 130, 246, 0.5)",
+              "pointer-events": "none",
+              "z-index": 9999,
+            }}
+          />
+        </Portal>
+      </Show>
+
       <Show when={isModalOpen()}>
         <Portal>
           <div class="modal modal-open">
@@ -263,15 +380,8 @@ const TaskList: Component = () => {
       <div class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
           <h3 class="text-xl font-bold">{t("task-list.title")()}</h3>
-          <input
-            type="text"
-            placeholder={t("task-list.search")()}
-            class="input input-sm input-bordered max-w-xs"
-            value={searchQuery()}
-            onInput={(e) => setSearchQuery(e.currentTarget.value)}
-          />
         </div>
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1" onMouseDown={(e) => e.stopPropagation()}>
           <Show
             when={selectedTasks().size > 0}
             fallback={
@@ -384,6 +494,61 @@ const TaskList: Component = () => {
             >
               <HiOutlinePlay class="w-5 h-5" />
             </button>
+
+            {/* Batch Move Buttons */}
+            <button
+              onClick={async () => {
+                const gids = getMovableGids();
+                if (gids.length > 0) {
+                  await aria2Store.changePositions(gids, 0, "POS_SET");
+                }
+              }}
+              class="btn btn-sm btn-ghost btn-square text-info"
+              title="Move Selected to Top"
+              disabled={getMovableGids().length === 0}
+            >
+              <HiOutlineChevronDoubleUp class="w-5 h-5" />
+            </button>
+            <button
+              onClick={async () => {
+                const gids = getMovableGids();
+                if (gids.length > 0) {
+                  await aria2Store.changePositions(gids, -1, "POS_CUR");
+                }
+              }}
+              class="btn btn-sm btn-ghost btn-square text-info"
+              title="Move Selected Up"
+              disabled={getMovableGids().length === 0}
+            >
+              <HiOutlineChevronUp class="w-5 h-5" />
+            </button>
+            <button
+              onClick={async () => {
+                const gids = getMovableGids();
+                if (gids.length > 0) {
+                  await aria2Store.changePositions(gids, 1, "POS_CUR");
+                }
+              }}
+              class="btn btn-sm btn-ghost btn-square text-info"
+              title="Move Selected Down"
+              disabled={getMovableGids().length === 0}
+            >
+              <HiOutlineChevronDown class="w-5 h-5" />
+            </button>
+            <button
+              onClick={async () => {
+                const gids = getMovableGids();
+                if (gids.length > 0) {
+                  await aria2Store.changePositions(gids, 0, "POS_END");
+                }
+              }}
+              class="btn btn-sm btn-ghost btn-square text-info"
+              title="Move Selected to Bottom"
+              disabled={getMovableGids().length === 0}
+            >
+              <HiOutlineChevronDoubleDown class="w-5 h-5" />
+            </button>
+
             <button
               onClick={async () => {
                 if (isShiftPressed()) {
@@ -408,23 +573,38 @@ const TaskList: Component = () => {
         </div>
       </div>
 
-      <div class="tabs tabs-boxed gap-1 flex justify-start">
-        {[
-          { id: "active", label: t("task-list.filter.active") },
-          { id: "waiting", label: t("task-list.filter.waiting") },
-          { id: "stopped", label: t("task-list.filter.stopped") },
-          { id: "all", label: t("task-list.filter.all") },
-        ].map((tab) => (
-          <button
-            onClick={() => setFilter(tab.id as any)}
-            class={`tab ${filter() === tab.id ? "tab-active" : ""}`}
-          >
-            {tab.label()}
-          </button>
-        ))}
+      <div class="flex items-center justify-between gap-4">
+        <div class="tabs tabs-boxed gap-1 flex justify-start">
+          {[
+            { id: "active", label: t("task-list.filter.active") },
+            { id: "waiting", label: t("task-list.filter.waiting") },
+            { id: "stopped", label: t("task-list.filter.stopped") },
+            { id: "all", label: t("task-list.filter.all") },
+          ].map((tab) => (
+            <button
+              onClick={() => setFilter(tab.id as any)}
+              class={`tab ${filter() === tab.id ? "tab-active" : ""}`}
+            >
+              {tab.label()}
+            </button>
+          ))}
+        </div>
+        <input
+          type="text"
+          placeholder={t("task-list.search")()}
+          class="input input-sm input-bordered max-w-xs"
+          value={searchQuery()}
+          onInput={(e) => setSearchQuery(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setSearchQuery("");
+              e.currentTarget.blur();
+            }
+          }}
+        />
       </div>
 
-      <div class="overflow-x-auto bg-base-100 rounded-box border border-base-300">
+      <div class="overflow-auto flex-1 bg-base-100 rounded-box border border-base-300">
         <table class="table table-zebra w-full">
           <thead>
             <tr>
@@ -438,12 +618,14 @@ const TaskList: Component = () => {
               <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("name")}>{t("task-list.title")()} {sortKey() === "name" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
               <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("progress")}>{t("task-detail.progress")()} {sortKey() === "progress" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
               <th class="text-right cursor-pointer hover:text-primary" onClick={() => toggleSort("status")}>{t("nav.status")()} {sortKey() === "status" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
+              <th class="text-left">{t("task-detail.directory")()}</th>
             </tr>
           </thead>
           <tbody>
             <For each={filteredTasks()}>
               {(task) => (
                 <tr
+                  data-gid={task.gid}
                   onClick={() => {
                     if (state.selectedTaskId !== task.gid) {
                       aria2Store.setSelectedTask(task.gid);
@@ -451,7 +633,7 @@ const TaskList: Component = () => {
                   }}
                   class={`hover cursor-pointer transition-all duration-300 ${
                     state.selectedTaskId === task.gid ? "bg-base-200" : ""
-                  } ${pendingGid() === task.gid ? "opacity-50 animate-pulse bg-primary/10" : ""}`}
+                  }`}
                   style="min-height: 32px;"
                 >
                   <td class="p-2">
@@ -459,6 +641,7 @@ const TaskList: Component = () => {
                       type="checkbox"
                       class="checkbox checkbox-sm"
                       checked={selectedTasks().has(task.gid)}
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleTask(task.gid);
@@ -505,54 +688,6 @@ const TaskList: Component = () => {
                   </td>
                   <td class="p-2 text-right">
                     <div class="flex items-center justify-end gap-2">
-                      <Show when={task.status === "paused" || task.status === "waiting"}>
-                        <div class="flex items-center gap-0.5 mr-2">
-                          <button
-                            title="Move to Top"
-                            class="btn btn-xs btn-ghost btn-square"
-                            disabled={pendingGid() !== null}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMove(task.gid, 0, "POS_SET");
-                            }}
-                          >
-                            <HiOutlineChevronDoubleUp class="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            title="Move Up"
-                            class="btn btn-xs btn-ghost btn-square"
-                            disabled={pendingGid() !== null}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMove(task.gid, -1, "POS_CUR");
-                            }}
-                          >
-                            <HiOutlineChevronUp class="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            title="Move Down"
-                            class="btn btn-xs btn-ghost btn-square"
-                            disabled={pendingGid() !== null}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMove(task.gid, 1, "POS_CUR");
-                            }}
-                          >
-                            <HiOutlineChevronDown class="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            title="Move to Bottom"
-                            class="btn btn-xs btn-ghost btn-square"
-                            disabled={pendingGid() !== null}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMove(task.gid, 0, "POS_END");
-                            }}
-                          >
-                            <HiOutlineChevronDoubleDown class="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </Show>
                       <Show when={task.status === "active"}>
                         <span class="text-xs opacity-50">
                           {formatSpeed(Number(task.downloadSpeed))}
@@ -563,13 +698,46 @@ const TaskList: Component = () => {
                       >
                         {t(`task-status.${task.status}`)()}
                       </span>
+                      <button
+                        title={t("task-detail.title")()}
+                        class="btn btn-xs btn-ghost btn-square text-primary"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          aria2Store.showTaskDetail(task.gid);
+                        }}
+                      >
+                        <HiOutlineInformationCircle class="w-4 h-4" />
+                      </button>
                     </div>
+                  </td>
+                  <td class="p-2 text-left text-xs max-w-[200px] truncate" title={task.dir}>
+                    {task.dir}
                   </td>
                 </tr>
               )}
             </For>
           </tbody>
         </table>
+      </div>
+
+      <div class="flex justify-end items-center gap-4 text-xs mt-4 pt-2 border-t border-base-200">
+        <div class="flex items-center gap-2 font-medium opacity-80">
+          <span>{t("task-list.filter.active")()}:</span>
+          <span class="badge badge-sm badge-primary">{state.tasks.filter((t) => t.status === "active").length}</span>
+        </div>
+        <div class="flex items-center gap-2 font-medium opacity-80">
+          <span>{t("task-list.filter.waiting")()}:</span>
+          <span class="badge badge-sm badge-info text-info-content">{state.tasks.filter((t) => t.status === "paused" || t.status === "waiting").length}</span>
+        </div>
+        <div class="flex items-center gap-2 font-medium opacity-80">
+          <span>{t("task-list.filter.stopped")()}:</span>
+          <span class="badge badge-sm badge-ghost border border-base-300">{state.tasks.filter((t) => t.status === "complete" || t.status === "error").length}</span>
+        </div>
+        <div class="flex items-center gap-2 font-medium opacity-80">
+          <span>{t("task-list.filter.all")()}:</span>
+          <span class="badge badge-sm badge-neutral">{state.tasks.length}</span>
+        </div>
       </div>
     </div>
   );
