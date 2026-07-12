@@ -2,7 +2,7 @@ import { For, createSignal, type Component, Show, createEffect } from "solid-js"
 import { Portal } from "solid-js/web";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
-import { formatSpeed } from "../utils/format";
+import { formatSpeed, formatSize } from "../utils/format";
 import AddTask from "./AddTask"; // Import AddTask to reuse its form logic
 import {
   HiOutlinePlay,
@@ -151,19 +151,21 @@ const TaskList: Component = () => {
 
   const handleConfirmDelete = async () => {
     const gids = deleteConfirmTasks();
-    if (gids) {
-      for (const gid of gids) {
+    if (gids && gids.length > 0) {
+      try {
         if (forceDeleteChecked()) {
-          await aria2Store.forceRemoveTask(gid);
+          await aria2Store.forceRemoveTasks(gids);
         } else {
-          await aria2Store.removeTask(gid);
+          await aria2Store.removeTasks(gids);
         }
+        setSelectedTasks((prev) => {
+          const next = new Set(prev);
+          gids.forEach((gid) => next.delete(gid));
+          return next;
+        });
+      } catch (e) {
+        console.error("Failed to batch delete tasks:", e);
       }
-      setSelectedTasks((prev) => {
-        const next = new Set(prev);
-        gids.forEach((gid) => next.delete(gid));
-        return next;
-      });
     }
     setDeleteConfirmTasks(null);
   };
@@ -464,14 +466,14 @@ const TaskList: Component = () => {
             </span>
             <button
               onClick={async () => {
-                for (const gid of selectedTasks()) {
+                const gids = Array.from(selectedTasks());
+                if (gids.length > 0) {
                   if (isShiftPressed()) {
-                    await aria2Store.forcePauseTask(gid);
+                    await aria2Store.forcePauseTasks(gids);
                   } else {
-                    await aria2Store.pauseTask(gid);
+                    await aria2Store.pauseTasks(gids);
                   }
                 }
-                await aria2Store.fetchTasks();
               }}
               class={`btn btn-sm btn-ghost btn-square transition-all ${
                 isShiftPressed() ? "text-warning border border-warning/30 bg-warning/5" : ""
@@ -483,10 +485,10 @@ const TaskList: Component = () => {
             </button>
             <button
               onClick={async () => {
-                for (const gid of selectedTasks()) {
-                  await aria2Store.resumeTask(gid);
+                const gids = Array.from(selectedTasks());
+                if (gids.length > 0) {
+                  await aria2Store.resumeTasks(gids);
                 }
-                await aria2Store.fetchTasks();
               }}
               class="btn btn-sm btn-ghost btn-square"
               title={t("task-detail.resume")()}
@@ -551,15 +553,15 @@ const TaskList: Component = () => {
 
             <button
               onClick={async () => {
+                const gids = Array.from(selectedTasks());
                 if (isShiftPressed()) {
-                  for (const gid of selectedTasks()) {
-                    await aria2Store.forceRemoveTask(gid);
+                  if (gids.length > 0) {
+                    await aria2Store.forceRemoveTasks(gids);
                   }
                   setSelectedTasks(new Set<string>());
-                  await aria2Store.fetchTasks();
                 } else {
                   setForceDeleteChecked(false);
-                  setDeleteConfirmTasks(Array.from(selectedTasks()));
+                  setDeleteConfirmTasks(gids);
                 }
               }}
               class={`btn btn-sm btn-ghost btn-square text-error transition-all ${
@@ -616,6 +618,7 @@ const TaskList: Component = () => {
                 />
               </th>
               <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("name")}>{t("task-list.title")()} {sortKey() === "name" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
+              <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("size")}>{t("task-detail.totalSize")().replace(/[:：]/g, "")} {sortKey() === "size" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
               <th class="cursor-pointer hover:text-primary" onClick={() => toggleSort("progress")}>{t("task-detail.progress")()} {sortKey() === "progress" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
               <th class="text-right cursor-pointer hover:text-primary" onClick={() => toggleSort("status")}>{t("nav.status")()} {sortKey() === "status" && (sortDirection() === "asc" ? "↑" : "↓")}</th>
               <th class="text-left">{t("task-detail.directory")()}</th>
@@ -655,6 +658,9 @@ const TaskList: Component = () => {
                           t("task-status.unknown")()}
                       </span>
                     </div>
+                  </td>
+                  <td class="p-2 text-sm">
+                    {formatSize(Number(task.totalLength))}
                   </td>
                   <td class="p-2">
                     <div class="flex items-center gap-2">

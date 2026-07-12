@@ -426,6 +426,21 @@ export const aria2Store = {
     }
   },
 
+  async pauseTasks(gids: string[]) {
+    if (!client) await this.connect();
+    try {
+      const calls = gids.map((gid) => ({
+        method: "aria2.pause",
+        params: [gid],
+      }));
+      await client!.multicall(calls);
+      await this.fetchTasks();
+    } catch (e) {
+      logger.error(`Failed to pause tasks: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
   async forcePauseTask(gid: string) {
     if (!client) await this.connect();
     try {
@@ -437,6 +452,21 @@ export const aria2Store = {
     }
   },
 
+  async forcePauseTasks(gids: string[]) {
+    if (!client) await this.connect();
+    try {
+      const calls = gids.map((gid) => ({
+        method: "aria2.forcePause",
+        params: [gid],
+      }));
+      await client!.multicall(calls);
+      await this.fetchTasks();
+    } catch (e) {
+      logger.error(`Failed to force pause tasks: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
   async resumeTask(gid: string) {
     if (!client) await this.connect();
     try {
@@ -444,6 +474,21 @@ export const aria2Store = {
       await this.fetchTasks();
     } catch (e) {
       logger.error(`Failed to resume task: `, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async resumeTasks(gids: string[]) {
+    if (!client) await this.connect();
+    try {
+      const calls = gids.map((gid) => ({
+        method: "aria2.unpause",
+        params: [gid],
+      }));
+      await client!.multicall(calls);
+      await this.fetchTasks();
+    } catch (e) {
+      logger.error(`Failed to resume tasks: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },
@@ -469,6 +514,28 @@ export const aria2Store = {
     }
   },
 
+  async removeTasks(gids: string[]) {
+    if (!client) await this.connect();
+    try {
+      const calls = gids.map((gid) => {
+        const task = state.tasks.find((t) => t.gid === gid);
+        const isActive = task?.status === "active" || task?.status === "waiting" || task?.status === "paused";
+        return {
+          method: isActive ? "aria2.remove" : "aria2.removeDownloadResult",
+          params: [gid],
+        };
+      });
+      await client!.multicall(calls);
+
+      // Local UI update
+      setState("tasks", (tasks) => tasks.filter((t) => !gids.includes(t.gid)));
+      this.fetchGlobalStat().catch(() => {});
+    } catch (e) {
+      logger.error(`Failed to remove tasks: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
   async forceRemoveTask(gid: string) {
     if (!client) await this.connect();
     try {
@@ -486,6 +553,28 @@ export const aria2Store = {
       this.fetchGlobalStat().catch(() => {});
     } catch (e) {
       logger.error(`Failed to force remove task ${gid}: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async forceRemoveTasks(gids: string[]) {
+    if (!client) await this.connect();
+    try {
+      const calls = gids.map((gid) => {
+        const task = state.tasks.find((t) => t.gid === gid);
+        const isActive = task?.status === "active" || task?.status === "waiting" || task?.status === "paused";
+        return {
+          method: isActive ? "aria2.forceRemove" : "aria2.removeDownloadResult",
+          params: [gid],
+        };
+      });
+      await client!.multicall(calls);
+
+      // Local UI update
+      setState("tasks", (tasks) => tasks.filter((t) => !gids.includes(t.gid)));
+      this.fetchGlobalStat().catch(() => {});
+    } catch (e) {
+      logger.error(`Failed to force remove tasks: ${e}`, LOG_CONTEXT);
       throw e;
     }
   },
@@ -526,10 +615,11 @@ export const aria2Store = {
   async getTaskOption(gid: string, name: string) {
     if (!client) await this.connect();
     try {
-      return await client!.request<string | number | boolean>(
+      const res = await client!.request<any>(
         "aria2.getOption",
-        [gid, name],
+        [gid],
       );
+      return res?.[name];
     } catch (e) {
       logger.error(`Failed to get task option ${name} for ${gid}: ${e}`, LOG_CONTEXT);
       throw e;

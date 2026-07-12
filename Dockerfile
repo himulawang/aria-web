@@ -22,12 +22,7 @@ FROM ghcr.io/static-web-server/static-web-server:2-alpine
 COPY --from=build-stage /app/dist /public
 
 # SWS Configuration via Environment Variables:
-# 1. Set the port to 6881
-ENV SWS_PORT=6881
-# 2. Set the index file
-ENV SWS_INDEX_FILE=index.html
-# 3. Enable SPA fallback: if a file is not found, serve index.html
-ENV SWS_FALLBACK_FILE=index.html
+ENV SERVER_ROOT=/public
 
 # Expose port 6881
 EXPOSE 6881
