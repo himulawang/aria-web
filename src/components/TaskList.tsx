@@ -16,7 +16,12 @@ import {
   HiOutlineForward,
   HiOutlineXMark,
   HiOutlineInformationCircle,
+  HiOutlineFolder,
+  HiOutlineFolderOpen,
+  HiOutlineQueueList,
 } from "solid-icons/hi";
+
+
 
 const TaskList: Component = () => {
   const getStatusStyle = (status: string) => {
@@ -48,6 +53,57 @@ const TaskList: Component = () => {
     "all" | "active" | "waiting" | "stopped"
   >("active");
   const [isShiftPressed, setIsShiftPressed] = createSignal(false);
+  const [collapsedDirs, setCollapsedDirs] = createSignal<Set<string>>((() => {
+    try {
+      const stored = localStorage.getItem("aria2_collapsed_dirs");
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  })());
+
+
+  const toggleDirCollapse = (dir: string) => {
+    const next = new Set(collapsedDirs());
+    if (next.has(dir)) {
+      next.delete(dir);
+    } else {
+      next.add(dir);
+    }
+    setCollapsedDirs(next);
+  };
+
+  // Sync collapsed state with active task directories to prune completed tasks/folders.
+  // Guard with state.initialFetchDone to prevent wiping out state during initial page load
+  // when state.tasks is temporarily empty before the first fetch completes.
+  createEffect(() => {
+    const tasks = state.tasks;
+    const collapsed = collapsedDirs();
+
+    if (state.initialFetchDone) {
+      const currentDirs = new Set(tasks.map((t) => t.dir || "Default"));
+      const pruned = new Set<string>();
+      let changed = false;
+
+      for (const dir of collapsed) {
+        if (currentDirs.has(dir)) {
+          pruned.add(dir);
+        } else {
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        setCollapsedDirs(pruned);
+        localStorage.setItem("aria2_collapsed_dirs", JSON.stringify(Array.from(pruned)));
+      } else {
+        localStorage.setItem("aria2_collapsed_dirs", JSON.stringify(Array.from(collapsed)));
+      }
+    }
+  });
+
+
+
 
   createEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -295,6 +351,86 @@ const TaskList: Component = () => {
     return result;
   };
 
+  const groupedTasks = () => {
+    const tasks = filteredTasks();
+    const map = new Map<string, typeof tasks>();
+    for (const task of tasks) {
+      const dir = task.dir || "Default";
+      if (!map.has(dir)) {
+        map.set(dir, []);
+      }
+      map.get(dir)!.push(task);
+    }
+
+    const sortedGroups = Array.from(map.entries()).map(([dir, tasks]) => {
+      const totalSize = tasks.reduce((sum, t) => sum + Number(t.totalLength || 0), 0);
+      const completedLength = tasks.reduce((sum, t) => sum + Number(t.completedLength || 0), 0);
+      const totalSpeed = tasks.reduce((sum, t) => sum + (t.status === "active" ? Number(t.downloadSpeed || 0) : 0), 0);
+
+      const activeCount = tasks.filter(t => t.status === "active" || t.status === "waiting").length;
+      const pausedCount = tasks.filter(t => t.status === "paused").length;
+      const completedCount = tasks.filter(t => t.status === "complete").length;
+      const errorCount = tasks.filter(t => t.status === "error").length;
+
+      const progressPercent = totalSize > 0
+        ? Math.min(100, Math.round((completedLength / totalSize) * 100))
+        : 0;
+
+      return {
+        dir,
+        tasks,
+        totalSize,
+        completedLength,
+        progressPercent,
+        totalSpeed,
+        activeCount,
+        pausedCount,
+        completedCount,
+        errorCount,
+      };
+    });
+
+    sortedGroups.sort((a, b) => a.dir.localeCompare(b.dir));
+    return sortedGroups;
+  };
+
+  const toggleExpandCollapseAll = () => {
+    const allDirs = new Set<string>(state.tasks.map((t) => t.dir || "Default"));
+    if (collapsedDirs().size === allDirs.size) {
+      setCollapsedDirs(new Set<string>());
+    } else {
+      setCollapsedDirs(allDirs);
+    }
+  };
+
+
+  const arrangePriorityByDirectory = async () => {
+    const queueable = state.tasks.filter(
+      (t) => t.status === "active" || t.status === "waiting" || t.status === "paused"
+    );
+    if (queueable.length <= 1) return;
+
+    const sorted = [...queueable].sort((a, b) => {
+      const dirA = a.dir || "";
+      const dirB = b.dir || "";
+      const dirCompare = dirA.localeCompare(dirB);
+      if (dirCompare !== 0) return dirCompare;
+
+      const nameA = a.files[0]?.path?.split("/").pop() || "";
+      const nameB = b.files[0]?.path?.split("/").pop() || "";
+      return nameA.localeCompare(nameB);
+    });
+
+    const gids = sorted.map((t) => t.gid);
+    try {
+      await aria2Store.changePositions(gids, 0, "POS_SET");
+    } catch (e) {
+      console.error("Failed to rearrange download queue by directory:", e);
+    }
+  };
+
+
+
   return (
     <div
       ref={containerRef}
@@ -443,6 +579,31 @@ const TaskList: Component = () => {
                 </div>
 
                 <button
+                  onClick={toggleExpandCollapseAll}
+                  class="btn btn-sm btn-ghost btn-square"
+                  title={
+                    collapsedDirs().size === new Set(state.tasks.map((t) => t.dir || "Default")).size
+                      ? "Expand All Folders"
+                      : "Collapse All Folders"
+                  }
+                >
+                  <Show
+                    when={collapsedDirs().size === new Set(state.tasks.map((t) => t.dir || "Default")).size}
+                    fallback={<HiOutlineFolderOpen class="w-5 h-5 text-warning" />}
+                  >
+                    <HiOutlineFolder class="w-5 h-5 text-warning opacity-60" />
+                  </Show>
+                </button>
+
+                <button
+                  onClick={arrangePriorityByDirectory}
+                  class="btn btn-sm btn-ghost btn-square text-info"
+                  title="Arrange Download Queue by Directory"
+                >
+                  <HiOutlineQueueList class="w-5 h-5" />
+                </button>
+
+                <button
                   onClick={async () => {
                     await aria2Store.purgeDownloadResult();
                   }}
@@ -452,6 +613,7 @@ const TaskList: Component = () => {
                   <HiOutlineTrash class="w-5 h-5" />
                 </button>
               </>
+
             }
           >
             <span class="text-xs font-semibold px-2 py-1 bg-base-300 rounded-lg flex items-center gap-1 mr-1">
@@ -625,105 +787,205 @@ const TaskList: Component = () => {
             </tr>
           </thead>
           <tbody>
-            <For each={filteredTasks()}>
-              {(task) => (
-                <tr
-                  data-gid={task.gid}
-                  onClick={() => {
-                    if (state.selectedTaskId !== task.gid) {
-                      aria2Store.setSelectedTask(task.gid);
-                    }
-                  }}
-                  class={`hover cursor-pointer transition-all duration-300 ${
-                    state.selectedTaskId === task.gid ? "bg-base-200" : ""
-                  }`}
-                  style="min-height: 32px;"
-                >
-                  <td class="p-2">
-                    <input
-                      type="checkbox"
-                      class="checkbox checkbox-sm"
-                      checked={selectedTasks().has(task.gid)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleTask(task.gid);
-                      }}
-                    />
-                  </td>
-                  <td class="p-2">
-                    <div class="flex flex-col">
-                      <span class="truncate max-w-sm block text-sm font-medium">
-                        {task.files[0]?.path?.split("/").pop() ||
-                          t("task-status.unknown")()}
-                      </span>
-                    </div>
-                  </td>
-                  <td class="p-2 text-sm">
-                    {formatSize(Number(task.totalLength))}
-                  </td>
-                  <td class="p-2">
-                    <div class="flex items-center gap-2">
-                      <progress
-                        class="progress progress-primary w-24 h-2"
-                        value={
-                          task.totalLength > 0
-                            ? Math.min(
-                                100,
-                                Math.round(
-                                  (task.completedLength / task.totalLength) *
-                                    100,
-                                ),
-                              )
-                            : 0
-                        }
-                        max="100"
-                      ></progress>
-                      <span class="text-xs">
-                        {task.totalLength > 0
-                          ? Math.min(
-                              100,
-                              Math.round(
-                                (task.completedLength / task.totalLength) * 100,
-                              ),
-                            )
-                          : 0}
-                        %
-                      </span>
-                    </div>
-                  </td>
-                  <td class="p-2 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                      <Show when={task.status === "active"}>
-                        <span class="text-xs opacity-50">
-                          {formatSpeed(Number(task.downloadSpeed))}
-                        </span>
-                      </Show>
-                      <span
-                        class={`badge badge-sm ${getStatusStyle(task.status)}`}
-                      >
-                        {t(`task-status.${task.status}`)()}
-                      </span>
-                      <button
-                        title={t("task-detail.title")()}
-                        class="btn btn-xs btn-ghost btn-square text-primary"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          aria2Store.showTaskDetail(task.gid);
-                        }}
-                      >
-                        <HiOutlineInformationCircle class="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                  <td class="p-2 text-left text-xs max-w-[200px] truncate" title={task.dir}>
-                    {task.dir}
-                  </td>
-                </tr>
-              )}
+            <For each={groupedTasks()}>
+              {(group) => {
+                const allChecked = () => group.tasks.every((t) => selectedTasks().has(t.gid));
+
+                return (
+                  <>
+                    {/* Folder Header Row */}
+                    <tr
+                      class="bg-base-200/40 hover:bg-base-200/70 border-b border-base-200 cursor-pointer font-medium select-none"
+                      onClick={() => toggleDirCollapse(group.dir)}
+                    >
+                      <td class="p-2" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          class="checkbox checkbox-sm checkbox-secondary"
+                          checked={allChecked()}
+                          ref={(el) => {
+                            createEffect(() => {
+                              const count = group.tasks.filter((t) => selectedTasks().has(t.gid)).length;
+                              el.indeterminate = count > 0 && count < group.tasks.length;
+                            });
+                          }}
+                          onChange={() => {
+                            const next = new Set(selectedTasks());
+                            if (allChecked()) {
+                              group.tasks.forEach((t) => next.delete(t.gid));
+                            } else {
+                              group.tasks.forEach((t) => next.add(t.gid));
+                            }
+                            setSelectedTasks(next);
+                          }}
+                        />
+                      </td>
+                      <td class="p-2">
+                        <div class="flex items-center gap-2">
+                          <HiOutlineChevronDown
+                            class={`w-4 h-4 text-base-content/50 transition-transform duration-200 ${
+                              collapsedDirs().has(group.dir) ? "-rotate-90" : ""
+                            }`}
+                          />
+                          <Show
+                            when={collapsedDirs().has(group.dir)}
+                            fallback={<HiOutlineFolderOpen class="w-5 h-5 text-warning shrink-0" />}
+                          >
+                            <HiOutlineFolder class="w-5 h-5 text-warning shrink-0" />
+                          </Show>
+                          <span class="truncate max-w-sm block text-sm font-semibold">
+                            {group.dir.split("/").pop() || group.dir}
+                          </span>
+                          <span class="badge badge-sm badge-ghost text-xs opacity-60">
+                            {group.tasks.length}
+                          </span>
+                        </div>
+                      </td>
+                      <td class="p-2 text-sm font-semibold">
+                        {formatSize(group.totalSize)}
+                      </td>
+                      <td class="p-2">
+                        <div class="flex items-center gap-2">
+                          <progress
+                            class="progress progress-secondary w-24 h-2"
+                            value={group.progressPercent}
+                            max="100"
+                          ></progress>
+                          <span class="text-xs">{group.progressPercent}%</span>
+                        </div>
+                      </td>
+                      <td class="p-2 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                          <Show when={group.totalSpeed > 0}>
+                            <span class="text-xs opacity-60 font-semibold text-success">
+                              {formatSpeed(group.totalSpeed)}
+                            </span>
+                          </Show>
+                          <Show when={group.activeCount > 0}>
+                            <span class="badge badge-sm badge-primary text-xs shrink-0">
+                              {group.activeCount} active
+                            </span>
+                          </Show>
+                          <Show when={group.pausedCount > 0}>
+                            <span class="badge badge-sm badge-warning text-xs shrink-0">
+                              {group.pausedCount} paused
+                            </span>
+                          </Show>
+                        </div>
+                      </td>
+                      <td class="p-2 text-left text-xs max-w-[200px] truncate opacity-50" title={group.dir}>
+                        {group.dir}
+                      </td>
+                    </tr>
+
+                    {/* Child Task Rows */}
+                    <Show when={!collapsedDirs().has(group.dir)}>
+                      <For each={group.tasks}>
+                        {(task) => (
+                          <tr
+                            data-gid={task.gid}
+                            onClick={() => {
+                              if (state.selectedTaskId !== task.gid) {
+                                aria2Store.setSelectedTask(task.gid);
+                              }
+                            }}
+                            class={`hover cursor-pointer transition-all duration-300 ${
+                              state.selectedTaskId === task.gid ? "bg-base-200" : ""
+                            }`}
+                            style="min-height: 32px;"
+                          >
+                            <td class="p-2 pl-4">
+                              <input
+                                type="checkbox"
+                                class="checkbox checkbox-sm"
+                                checked={selectedTasks().has(task.gid)}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleTask(task.gid);
+                                }}
+                              />
+                            </td>
+                            <td class="p-2 pl-8">
+                              <div class="flex items-center gap-2">
+                                <span class="text-base-content/30 select-none">└─</span>
+                                <span class="truncate max-w-sm block text-sm font-medium text-base-content/90">
+                                  {task.files[0]?.path?.split("/").pop() ||
+                                    t("task-status.unknown")()}
+                                </span>
+                              </div>
+                            </td>
+                            <td class="p-2 text-sm text-base-content/70">
+                              {formatSize(Number(task.totalLength))}
+                            </td>
+                            <td class="p-2">
+                              <div class="flex items-center gap-2 opacity-90">
+                                <progress
+                                  class="progress progress-primary w-24 h-2"
+                                  value={
+                                    task.totalLength > 0
+                                      ? Math.min(
+                                          100,
+                                          Math.round(
+                                            (task.completedLength / task.totalLength) *
+                                              100,
+                                          ),
+                                        )
+                                      : 0
+                                  }
+                                  max="100"
+                                ></progress>
+                                <span class="text-xs">
+                                  {task.totalLength > 0
+                                    ? Math.min(
+                                        100,
+                                        Math.round(
+                                          (task.completedLength / task.totalLength) * 100,
+                                        ),
+                                      )
+                                    : 0}
+                                  %
+                                </span>
+                              </div>
+                            </td>
+                            <td class="p-2 text-right">
+                              <div class="flex items-center justify-end gap-2">
+                                <Show when={task.status === "active"}>
+                                  <span class="text-xs opacity-50">
+                                    {formatSpeed(Number(task.downloadSpeed))}
+                                  </span>
+                                </Show>
+                                <span
+                                  class={`badge badge-sm ${getStatusStyle(task.status)}`}
+                                >
+                                  {t(`task-status.${task.status}`)()}
+                                </span>
+                                <button
+                                  title={t("task-detail.title")()}
+                                  class="btn btn-xs btn-ghost btn-square text-primary"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    aria2Store.showTaskDetail(task.gid);
+                                  }}
+                                >
+                                  <HiOutlineInformationCircle class="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                            <td class="p-2 text-left text-xs max-w-[200px] truncate">
+                              {/* Keep blank for child task directory column to avoid duplication */}
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </Show>
+                  </>
+                );
+              }}
             </For>
           </tbody>
+
         </table>
       </div>
 

@@ -35,6 +35,7 @@ interface Aria2State {
   globalStat: GlobalStat | null;
   isDownloading: boolean;
   appSettings: AppSettings;
+  initialFetchDone: boolean;
 }
 
 const DEFAULT_CONFIG: Aria2Config = {
@@ -55,6 +56,7 @@ const [state, setState] = createStore<Aria2State>({
   globalStat: null,
   isDownloading: false,
   appSettings: DEFAULT_APP_SETTINGS,
+  initialFetchDone: false,
 });
 
 let client: Aria2Client | null = null;
@@ -257,6 +259,7 @@ export const aria2Store = {
       await client.disconnect();
     }
     setState("connectionStatus", "disconnected");
+    setState("initialFetchDone", false);
   },
 
   async fetchActiveTasks() {
@@ -343,6 +346,7 @@ export const aria2Store = {
       );
 
       setState("tasks", allTasks);
+      setState("initialFetchDone", true);
     } catch (e) {
       logger.error(`Failed to fetch tasks: ${e}`, LOG_CONTEXT);
       throw e;
