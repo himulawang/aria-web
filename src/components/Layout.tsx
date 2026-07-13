@@ -83,7 +83,7 @@ const Layout: Component<LayoutProps> = (props) => {
   return (
     <div class="flex h-screen overflow-hidden bg-base-200">
       <aside
-        class={`menu p-4 h-full bg-base-100 text-base-content border-r border-base-300 flex flex-col transition-all duration-300 shrink-0 ${shouldCollapse() ? "w-16" : "w-64"}`}
+        class={`menu ${shouldCollapse() ? "p-2" : "p-4"} h-full bg-base-100 text-base-content border-r border-base-300 flex flex-col flex-nowrap transition-all duration-300 shrink-0 ${shouldCollapse() ? "w-16" : "w-64"}`}
       >
         <div class="flex items-center justify-between mb-4">
           <div
@@ -98,7 +98,7 @@ const Layout: Component<LayoutProps> = (props) => {
             {isCollapsed() ? ">" : "<"}
           </button>
         </div>
-        <nav class="flex-1">
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden min-h-0 sidebar-scroll">
           <For each={navItems.filter((i) => i.position === "sidebar")}>
             {(item) =>
               item.view === "settings" ? (
@@ -185,7 +185,7 @@ const Layout: Component<LayoutProps> = (props) => {
             }
           </For>
         </nav>
-        <div class="mt-auto pt-4 border-t border-base-300 flex flex-col gap-3">
+        <div class={`mt-auto pt-4 border-t border-base-300 flex flex-col gap-3 ${shouldCollapse() ? "items-center" : ""}`}>
           <SpeedSummary isCollapsed={shouldCollapse()} />
           <ConnectionStatus isCollapsed={shouldCollapse()} />
         </div>

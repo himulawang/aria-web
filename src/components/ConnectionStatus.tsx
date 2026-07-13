@@ -31,10 +31,10 @@ const SpeedSummary: Component<{ isCollapsed: boolean }> = (props) => {
   return (
     <>
       <div
-        class={`flex flex-col gap-2 p-3 bg-base-200 rounded-lg cursor-pointer hover:bg-base-300 transition-colors text-xs ${props.isCollapsed ? "items-center" : ""}`}
+        class={`flex flex-col gap-2 bg-base-200 rounded-lg cursor-pointer hover:bg-base-300 transition-colors text-xs ${props.isCollapsed ? "p-2 items-center justify-center w-8 h-8" : "p-3 w-full"}`}
         onClick={openLimits}
       >
-        <div class="flex justify-between items-center opacity-80 w-full">
+        <div class={`flex items-center opacity-80 ${props.isCollapsed ? "justify-center" : "justify-between w-full"}`}>
           <div class="flex items-center gap-1.5">
             <HiOutlineArrowDownTray class="w-4 h-4 text-primary" />
             {!props.isCollapsed &&
@@ -131,7 +131,7 @@ const ConnectionStatus: Component<{ isCollapsed: boolean }> = (props) => {
     }
   });
   return (
-    <div class="flex items-center gap-2 px-2">
+    <div class={`flex items-center gap-2 ${props.isCollapsed ? "px-0 justify-center w-full" : "px-2"}`}>
       <div
         class={`w-2.5 h-2.5 rounded-full ${statusInfo().color}`}
         title={statusInfo().text}

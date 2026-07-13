@@ -29,14 +29,44 @@ The project follows a structured migration path from AriaNg to ensure feature pa
 
 `aria-web` is packaged as a Docker image using a multi-stage build process to ensure the final image is as small as possible.
 
-### Build and Run
+### Run with Docker Compose / Docker Run
+
+You can deploy `aria-web` using the pre-built image from GitHub Container Registry (GHCR).
+
+#### Docker Compose
+
+Add the following snippet to your `docker-compose.yml` file:
+
+```yaml
+services:
+  aria-web:
+    image: ghcr.io/himulawang/aria-web:v0.4.1
+    container_name: aria-web
+    restart: unless-stopped
+    ports:
+      - "6881:80" # 访问这个端口打开下载界面
+```
+
+#### Docker Run
+
+To achieve the same functionality using a pure `docker run` command, run:
+
+```bash
+docker run -d \
+  --name aria-web \
+  --restart unless-stopped \
+  -p 6881:80 \
+  ghcr.io/himulawang/aria-web:v0.4.1
+```
+
+### Build and Run Locally
 
 To build the image locally:
 ```bash
 docker build -t aria-web .
 ```
 
-To run the container:
+To run the locally built container:
 ```bash
 docker run -d -p 6881:6881 --name aria-web aria-web
 ```
