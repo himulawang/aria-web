@@ -8,14 +8,18 @@ import TaskListHeader from "./TaskListHeader";
 import TaskListTable from "./TaskListTable";
 import { useDragSelect } from "./useDragSelect";
 
-const TaskList: Component = () => {
+interface TaskListProps {
+  filter: "all" | "active" | "waiting" | "stopped";
+  setFilter: (f: "all" | "active" | "waiting" | "stopped") => void;
+}
+
+const TaskList: Component<TaskListProps> = (props) => {
   const state = aria2Store.getState();
   const [selectedTasks, setSelectedTasks] = createSignal<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = createSignal(false);
   const [searchQuery, setSearchQuery] = createSignal("");
   const [sortKey, setSortKey] = createSignal<string | null>(null);
   const [sortDirection, setSortDirection] = createSignal<"asc" | "desc">("asc");
-  const [filter, setFilter] = createSignal<"all" | "active" | "waiting" | "stopped">("active");
   const [isShiftPressed, setIsShiftPressed] = createSignal(false);
   const [collapsedDirs, setCollapsedDirs] = createSignal<Set<string>>((() => {
     try {
@@ -135,13 +139,13 @@ const TaskList: Component = () => {
     const tasks = state.tasks;
     let result = tasks;
 
-    if (filter() === "active") {
+    if (props.filter === "active") {
       result = tasks.filter((t) => t.status === "active");
-    } else if (filter() === "waiting") {
+    } else if (props.filter === "waiting") {
       result = tasks.filter((t) => t.status === "paused" || t.status === "waiting");
-    } else if (filter() === "stopped") {
+    } else if (props.filter === "stopped") {
       result = tasks.filter((t) => t.status === "complete" || t.status === "error");
-    } else if (filter() === "all") {
+    } else if (props.filter === "all") {
       result = tasks;
     }
 
@@ -229,7 +233,7 @@ const TaskList: Component = () => {
       const errorCount = tasks.filter(t => t.status === "error").length;
 
       let progressPercent = 0;
-      if (filter() === "active") {
+      if (props.filter === "active") {
         progressPercent = totalSize > 0
           ? Math.min(100, Math.round((completedLength / totalSize) * 100))
           : 0;
@@ -342,8 +346,8 @@ const TaskList: Component = () => {
       <TaskListHeader
         selectedTasks={selectedTasks()}
         setSelectedTasks={setSelectedTasks}
-        filter={filter()}
-        setFilter={setFilter}
+        filter={props.filter}
+        setFilter={props.setFilter}
         searchQuery={searchQuery()}
         setSearchQuery={setSearchQuery}
         isShiftPressed={isShiftPressed()}

@@ -65,7 +65,7 @@
   "nav.settings.btOptions": "Настройки BitTorrent",
   "nav.settings.connectionOptions": "Настройки соединения",
   "nav.settings.diskOptions": "Настройки диска",
-  "nav.settings.ftpSFtpOptions": "Настройки HTTP/FTP/SFTP",
+  "nav.settings.ftpSFtpOptions": "Настройки FTP/SFTP",
   "nav.settings.httpFtpSFtpOptions": "Настройки HTTP/FTP/SFTP",
   "nav.settings.httpOptions": "Настройки HTTP",
   "nav.settings.metalinkOptions": "Настройки Metalink",

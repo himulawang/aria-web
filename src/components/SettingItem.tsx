@@ -49,6 +49,7 @@ const SettingItem: Component<SettingItemProps> = (props) => {
                   type="checkbox"
                   class="toggle toggle-sm toggle-primary"
                   checked={String(props.value()) === "true"}
+                  disabled={props.opt.readonly}
                   onChange={(e) => handleUpdate(String(e.currentTarget.checked))}
                 />
               );
@@ -59,6 +60,7 @@ const SettingItem: Component<SettingItemProps> = (props) => {
                   type="number"
                   class="input input-bordered input-sm w-24"
                   value={props.value()}
+                  disabled={props.opt.readonly}
                   onInput={(e) => handleUpdate(parseInt(e.currentTarget.value, 10))}
                 />
               );
@@ -67,6 +69,7 @@ const SettingItem: Component<SettingItemProps> = (props) => {
                 <select
                   class="select select-bordered select-sm w-32"
                   value={String(props.value() ?? "")}
+                  disabled={props.opt.readonly}
                   onChange={(e) => handleUpdate(e.currentTarget.value)}
                 >
                   <For each={props.opt.options || []}>
@@ -80,6 +83,7 @@ const SettingItem: Component<SettingItemProps> = (props) => {
                   type="text"
                   class="input input-bordered input-sm w-32"
                   value={String(props.value() ?? "")}
+                  disabled={props.opt.readonly}
                   onInput={(e) => handleUpdate(e.currentTarget.value)}
                 />
               );

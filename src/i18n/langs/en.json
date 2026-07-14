@@ -58,7 +58,7 @@
   "nav.settings.btOptions": "BitTorrent Settings",
   "nav.settings.connectionOptions": "Connection Settings",
   "nav.settings.diskOptions": "Disk Settings",
-  "nav.settings.ftpSFtpOptions": "HTTP/FTP/SFTP Settings",
+  "nav.settings.ftpSFtpOptions": "FTP/SFTP Settings",
   "nav.settings.httpFtpSFtpOptions": "HTTP/FTP/SFTP Settings",
   "nav.settings.httpOptions": "HTTP Settings",
   "nav.settings.metalinkOptions": "Metalink Settings",

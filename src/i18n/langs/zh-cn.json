@@ -67,7 +67,7 @@
   "nav.settings.btOptions": "BitTorrent 设置",
   "nav.settings.connectionOptions": "连接设置",
   "nav.settings.diskOptions": "磁盘设置",
-  "nav.settings.ftpSFtpOptions": "HTTP/FTP/SFTP 设置",
+  "nav.settings.ftpSFtpOptions": "FTP/SFTP 设置",
   "nav.settings.httpFtpSFtpOptions": "HTTP/FTP/SFTP 设置",
   "nav.settings.httpOptions": "HTTP 设置",
   "nav.settings.metalinkOptions": "Metalink 设置",
