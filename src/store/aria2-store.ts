@@ -1029,8 +1029,6 @@ export const aria2Store = {
           LOG_CONTEXT,
         ),
       );
-      notificationStore.add(`Task ${gid} has started downloading`, "info", `Task started`);
-      notificationStore.notifyViaBrowser(`Aria2: Task Started`, `Task ${gid} has started downloading`);
     });
 
     client.on("aria2.onDownloadPause", (params: any[]) => {
@@ -1043,21 +1041,18 @@ export const aria2Store = {
           LOG_CONTEXT,
         ),
       );
-      notificationStore.add(`Task ${gid} is now paused`, "info", `Task paused`);
     });
 
     client.on("aria2.onDownloadStop", (params: any[]) => {
       const gid = params[0].gid;
       logger.debug(`Task stopped: ${gid}`, LOG_CONTEXT);
       setState("tasks", (prev) => prev.filter((t) => t.gid !== gid));
-      notificationStore.add(`Task ${gid} has been stopped`, "info", `Task stopped`);
-      notificationStore.notifyViaBrowser(`Aria2: Task Stopped`, `Task ${gid} has been stopped`);
       this.fetchGlobalStat().catch((err) =>
         logger.error(`Error fetching global stat on stop: ${err}`, LOG_CONTEXT),
       );
     });
 
-    client.on("aria2.onDownloadComplete", (params: any[]) => {
+    client.on("aria2.onDownloadComplete", async (params: any[]) => {
       const gid = params[0].gid;
       logger.debug(`Task completed: ${gid}`, LOG_CONTEXT);
       // Skip hidden GIDs (e.g. ED2K search tasks) — do NOT touch hiddenGids here,
@@ -1072,8 +1067,39 @@ export const aria2Store = {
         }
         this.fetchTasks();
       }, 500);
-      notificationStore.add(`Task ${gid} completed successfully`, "success", `Download Completed`);
-      notificationStore.notifyViaBrowser(`Aria2: Download Complete`, `Task ${gid} completed successfully`);
+
+      // Extract filename and directory path
+      let task = state.tasks.find((t) => t.gid === gid);
+      if (!task && client) {
+        try {
+          task = await client.request<any>("aria2.tellStatus", [gid, ["files", "dir", "bittorrent"]]);
+        } catch (e) {
+          logger.debug(`Failed to fetch task status for completed toast: ${e}`, LOG_CONTEXT);
+        }
+      }
+
+      let name = "";
+      let dir = "";
+      if (task) {
+        dir = task.dir || "";
+        if (task.files && task.files.length > 0) {
+          const firstFilePath = task.files[0]?.path;
+          if (firstFilePath) {
+            name = firstFilePath.split(/[/\\]/).pop() || "";
+          }
+        }
+        if (!name && task.bittorrent?.info?.name) {
+          name = task.bittorrent.info.name;
+        }
+      }
+      if (!name) {
+        name = gid;
+      }
+
+      const message = dir ? `Path: ${dir}\nFile: ${name}` : `File: ${name}`;
+      notificationStore.add(message, "success", `Download Completed`);
+      notificationStore.notifyViaBrowser(`Aria2: Download Complete`, message);
+
       this.fetchGlobalStat().catch((err) =>
         logger.error(
           `Error fetching global stat on complete: ${err}`,
@@ -1082,12 +1108,43 @@ export const aria2Store = {
       );
     });
 
-    client.on("aria2.onDownloadError", (params: any[]) => {
+    client.on("aria2.onDownloadError", async (params: any[]) => {
       const gid = params[0].gid;
       logger.debug(`Task error: ${gid}`, LOG_CONTEXT);
       setState("tasks", (t) => t.gid === gid, { status: "error" });
-      notificationStore.add(`Task ${gid} encountered an error`, "error", `Download Error`);
-      notificationStore.notifyViaBrowser(`Aria2: Download Error`, `Task ${gid} encountered an error`);
+
+      // Extract filename and directory path
+      let task = state.tasks.find((t) => t.gid === gid);
+      if (!task && client) {
+        try {
+          task = await client.request<any>("aria2.tellStatus", [gid, ["files", "dir", "bittorrent"]]);
+        } catch (e) {
+          logger.debug(`Failed to fetch task status for error toast: ${e}`, LOG_CONTEXT);
+        }
+      }
+
+      let name = "";
+      let dir = "";
+      if (task) {
+        dir = task.dir || "";
+        if (task.files && task.files.length > 0) {
+          const firstFilePath = task.files[0]?.path;
+          if (firstFilePath) {
+            name = firstFilePath.split(/[/\\]/).pop() || "";
+          }
+        }
+        if (!name && task.bittorrent?.info?.name) {
+          name = task.bittorrent.info.name;
+        }
+      }
+      if (!name) {
+        name = gid;
+      }
+
+      const message = dir ? `Path: ${dir}\nFile: ${name}` : `File: ${name}`;
+      notificationStore.add(`${message}\nEncountered an error`, "error", `Download Error`);
+      notificationStore.notifyViaBrowser(`Aria2: Download Error`, `${message} encountered an error`);
+
       this.fetchGlobalStat().catch((err) =>
         logger.error(
           `Error fetching global stat on error: ${err}`,
