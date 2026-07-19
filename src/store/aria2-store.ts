@@ -1,4 +1,4 @@
-import { createStore } from "solid-js/store";
+import { createStore, reconcile } from "solid-js/store";
 import { Aria2Client } from "../core/aria2-client";
 import type { Aria2Config } from "../core/types";
 import { StorageService } from "../core/storage";
@@ -345,7 +345,7 @@ export const aria2Store = {
           !hiddenGids.has(task.gid), // filter out hidden GIDs (e.g. ED2K search tasks)
       );
 
-      setState("tasks", allTasks);
+      setState("tasks", reconcile(allTasks, { key: "gid" }));
       setState("initialFetchDone", true);
     } catch (e) {
       logger.error(`Failed to fetch tasks: ${e}`, LOG_CONTEXT);

@@ -16,6 +16,7 @@ import {
   HiOutlineChevronDoubleUp,
   HiOutlineChevronDoubleDown,
 } from "solid-icons/hi";
+import { FaSolidBroom } from "solid-icons/fa";
 
 interface TaskListHeaderProps {
   selectedTasks: Set<string>;
@@ -149,16 +150,6 @@ const TaskListHeader: Component<TaskListHeaderProps> = (props) => {
                 >
                   <HiOutlineQueueList class="w-5 h-5" />
                 </button>
-
-                <button
-                  onClick={async () => {
-                    await aria2Store.purgeDownloadResult();
-                  }}
-                  class="btn btn-sm btn-ghost btn-square text-error/80"
-                  title="Purge Completed/Stopped Tasks"
-                >
-                  <HiOutlineTrash class="w-5 h-5" />
-                </button>
               </>
             }
           >
@@ -272,6 +263,16 @@ const TaskListHeader: Component<TaskListHeaderProps> = (props) => {
               <HiOutlineTrash class="w-5 h-5" />
             </button>
           </Show>
+
+          <button
+            onClick={async () => {
+              await aria2Store.purgeDownloadResult();
+            }}
+            class="btn btn-sm btn-ghost btn-square text-error/80"
+            title="Purge Completed/Stopped Tasks"
+          >
+            <FaSolidBroom class="w-5 h-5" />
+          </button>
         </div>
       </div>
 

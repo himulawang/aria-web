@@ -15,6 +15,7 @@ interface TaskListProps {
 
 const TaskList: Component<TaskListProps> = (props) => {
   const state = aria2Store.getState();
+  const groupCache = new Map<string, any>();
   const [selectedTasks, setSelectedTasks] = createSignal<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = createSignal(false);
   const [searchQuery, setSearchQuery] = createSignal("");
@@ -243,7 +244,25 @@ const TaskList: Component<TaskListProps> = (props) => {
           : 0;
       }
 
-      return {
+      // Check if there is a cached group with the identical properties and task elements
+      const existing = groupCache.get(dir);
+      if (
+        existing &&
+        existing.totalSize === totalSize &&
+        existing.completedLength === completedLength &&
+        existing.progressPercent === progressPercent &&
+        existing.totalSpeed === totalSpeed &&
+        existing.activeCount === activeCount &&
+        existing.pausedCount === pausedCount &&
+        existing.completedCount === completedCount &&
+        existing.errorCount === errorCount &&
+        existing.tasks.length === tasks.length &&
+        existing.tasks.every((t: any, idx: number) => t === tasks[idx])
+      ) {
+        return existing;
+      }
+
+      const newGroup = {
         dir,
         tasks,
         totalSize,
@@ -255,7 +274,17 @@ const TaskList: Component<TaskListProps> = (props) => {
         completedCount,
         errorCount,
       };
+      groupCache.set(dir, newGroup);
+      return newGroup;
     });
+
+    // Clean up cached directories no longer present
+    const currentDirs = new Set(sortedGroups.map((g) => g.dir));
+    for (const cachedDir of groupCache.keys()) {
+      if (!currentDirs.has(cachedDir)) {
+        groupCache.delete(cachedDir);
+      }
+    }
 
     sortedGroups.sort((a, b) => a.dir.localeCompare(b.dir));
     return sortedGroups;

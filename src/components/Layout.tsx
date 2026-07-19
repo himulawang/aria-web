@@ -1,4 +1,4 @@
-import { type Component, type JSX, createSignal, For, Show, onMount, onCleanup } from "solid-js";
+import { type Component, type JSX, createSignal, For, Show, onMount, onCleanup, createEffect } from "solid-js";
 import { Portal } from "solid-js/web";
 import { t } from "../i18n";
 import Toast from "./Toast";
@@ -24,9 +24,23 @@ interface LayoutProps {
 
 const Layout: Component<LayoutProps> = (props) => {
   const [isSettingsExpanded, setIsSettingsExpanded] = createSignal(true);
-  const [isCollapsed, setIsCollapsed] = createSignal(false);
+  const [isCollapsed, setIsCollapsed] = createSignal((() => {
+    try {
+      return localStorage.getItem("aria2_sidebar_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  })());
   const [isPopoverOpen, setIsPopoverOpen] = createSignal(false);
   const [isMobile, setIsMobile] = createSignal(window.innerWidth < 1024);
+
+  createEffect(() => {
+    try {
+      localStorage.setItem("aria2_sidebar_collapsed", String(isCollapsed()));
+    } catch (e) {
+      console.error(e);
+    }
+  });
 
   const shouldCollapse = () => isCollapsed() || isMobile();
 
