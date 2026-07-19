@@ -244,35 +244,51 @@ const TaskList: Component<TaskListProps> = (props) => {
           : 0;
       }
 
-      // Check if there is a cached group with the identical properties and task elements
       const existing = groupCache.get(dir);
-      if (
-        existing &&
-        existing.totalSize === totalSize &&
-        existing.completedLength === completedLength &&
-        existing.progressPercent === progressPercent &&
-        existing.totalSpeed === totalSpeed &&
-        existing.activeCount === activeCount &&
-        existing.pausedCount === pausedCount &&
-        existing.completedCount === completedCount &&
-        existing.errorCount === errorCount &&
-        existing.tasks.length === tasks.length &&
-        existing.tasks.every((t: any, idx: number) => t === tasks[idx])
-      ) {
+      if (existing) {
+        existing._setTasks(tasks);
+        existing._setTotalSize(totalSize);
+        existing._setCompletedLength(completedLength);
+        existing._setProgressPercent(progressPercent);
+        existing._setTotalSpeed(totalSpeed);
+        existing._setActiveCount(activeCount);
+        existing._setPausedCount(pausedCount);
+        existing._setCompletedCount(completedCount);
+        existing._setErrorCount(errorCount);
         return existing;
       }
 
+      const [rTasks, setTasks] = createSignal(tasks);
+      const [rTotalSize, setTotalSize] = createSignal(totalSize);
+      const [rCompletedLength, setCompletedLength] = createSignal(completedLength);
+      const [rProgressPercent, setProgressPercent] = createSignal(progressPercent);
+      const [rTotalSpeed, setTotalSpeed] = createSignal(totalSpeed);
+      const [rActiveCount, setActiveCount] = createSignal(activeCount);
+      const [rPausedCount, setPausedCount] = createSignal(pausedCount);
+      const [rCompletedCount, setCompletedCount] = createSignal(completedCount);
+      const [rErrorCount, setErrorCount] = createSignal(errorCount);
+
       const newGroup = {
         dir,
-        tasks,
-        totalSize,
-        completedLength,
-        progressPercent,
-        totalSpeed,
-        activeCount,
-        pausedCount,
-        completedCount,
-        errorCount,
+        get tasks() { return rTasks(); },
+        get totalSize() { return rTotalSize(); },
+        get completedLength() { return rCompletedLength(); },
+        get progressPercent() { return rProgressPercent(); },
+        get totalSpeed() { return rTotalSpeed(); },
+        get activeCount() { return rActiveCount(); },
+        get pausedCount() { return rPausedCount(); },
+        get completedCount() { return rCompletedCount(); },
+        get errorCount() { return rErrorCount(); },
+
+        _setTasks: setTasks,
+        _setTotalSize: setTotalSize,
+        _setCompletedLength: setCompletedLength,
+        _setProgressPercent: setProgressPercent,
+        _setTotalSpeed: setTotalSpeed,
+        _setActiveCount: setActiveCount,
+        _setPausedCount: setPausedCount,
+        _setCompletedCount: setCompletedCount,
+        _setErrorCount: setErrorCount,
       };
       groupCache.set(dir, newGroup);
       return newGroup;

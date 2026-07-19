@@ -101,6 +101,7 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                             el.indeterminate = count > 0 && count < group.tasks.length;
                           });
                         }}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={() => {
                           const next = new Set(props.selectedTasks);
                           if (allChecked()) {
@@ -186,7 +187,7 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                           }`}
                           style="min-height: 32px;"
                         >
-                          <td class="p-2 pl-4">
+                          <td class="p-2 pl-4" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               class="checkbox checkbox-sm"
