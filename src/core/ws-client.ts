@@ -18,6 +18,7 @@ export class WebSocketRpcClient {
   private eventListeners = new Map<string, Set<Function>>();
   private reconnectTimer: any = null;
   private isConnecting = false;
+  private isManualDisconnect = false;
 
   constructor(config: Aria2Config) {
     this.config = config;
@@ -38,6 +39,7 @@ export class WebSocketRpcClient {
   }
 
   async connect(): Promise<void> {
+    this.isManualDisconnect = false;
     if (
       this.socket &&
       (this.socket.readyState === WebSocket.OPEN ||
@@ -47,11 +49,16 @@ export class WebSocketRpcClient {
     }
 
     if (this.isConnecting) {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
+        let attempts = 0;
         const check = setInterval(() => {
+          attempts++;
           if (this.socket?.readyState === WebSocket.OPEN) {
             clearInterval(check);
             resolve();
+          } else if (!this.isConnecting || attempts > 50) {
+            clearInterval(check);
+            reject(new Error("Connection attempt failed or timed out"));
           }
         }, 100);
       });
@@ -89,6 +96,30 @@ export class WebSocketRpcClient {
         reject(e);
       }
     });
+  }
+
+  async disconnect() {
+    this.isManualDisconnect = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.socket) {
+      this.socket.onclose = null;
+      this.socket.onerror = null;
+      this.socket.onmessage = null;
+      this.socket.onopen = null;
+      if (
+        this.socket.readyState === WebSocket.OPEN ||
+        this.socket.readyState === WebSocket.CONNECTING
+      ) {
+        this.socket.close();
+      }
+      this.socket = null;
+    }
+    this.isConnecting = false;
+    this.pendingRequests.forEach((p) => p.reject(new Error("Client disconnected")));
+    this.pendingRequests.clear();
   }
 
   private handleMessage(data: string) {
@@ -130,7 +161,7 @@ export class WebSocketRpcClient {
     );
     this.pendingRequests.clear();
 
-    if (this.reconnectTimer) return;
+    if (this.reconnectTimer || this.isManualDisconnect) return;
 
     logger.info(
       `Scheduling reconnect in ${this.config.wsReconnectInterval}ms...`,
@@ -141,7 +172,7 @@ export class WebSocketRpcClient {
       try {
         await this.connect();
       } catch (e) {
-        logger.error("Reconnect failed", LOG_CONTEXT);
+        logger.error(`Reconnect failed: ${e}`, LOG_CONTEXT);
       }
     }, this.config.wsReconnectInterval);
   }

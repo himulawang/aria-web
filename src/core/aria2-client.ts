@@ -102,7 +102,8 @@ export class Aria2Client {
   }
 
   async disconnect() {
-    // Note: WebSocketRpcClient doesn't have a disconnect method yet,
-    // but we can implement one if needed.
+    if (this.config.useWebSocket) {
+      await this.wsClient.disconnect();
+    }
   }
 }

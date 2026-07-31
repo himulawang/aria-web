@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../AriaNg"
+		},
+		{
+			"path": "../aria2-next"
+		},
+		{
+			"path": "../motrix-next"
+		}
+	],
+	"settings": {}
+}

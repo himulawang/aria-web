@@ -153,8 +153,9 @@ export const aria2Store = {
     if (state.currentProfileId === id) {
       const profile = updatedProfiles.find((p) => p.id === id);
       if (profile) {
-        this.stopPolling();
+        await this.disconnect();
         client = new Aria2Client(profile.config);
+        listenersSetup = false;
         await this.connect();
       }
     }
@@ -164,10 +165,15 @@ export const aria2Store = {
     setState("currentProfileId", id);
     if (id) {
       await storageDB.set("current_profile_id", id);
+      await this.disconnect();
+      const profile = state.rpcProfiles.find((p) => p.id === id);
+      const config = profile ? profile.config : DEFAULT_CONFIG;
+      client = new Aria2Client(config);
+      listenersSetup = false;
       await this.connect();
     } else {
       await storageDB.remove("current_profile_id");
-      this.disconnect();
+      await this.disconnect();
     }
   },
 
@@ -217,15 +223,15 @@ export const aria2Store = {
     );
 
     // Persist to IndexedDB
-    await storageDB.set("rpc_profiles", state.rpcProfiles); // Note: state update is reactive but might be async
-    // Better to use the newly calculated list
     const allProfiles = state.rpcProfiles.map((p) =>
       p.id === profileId ? { ...p, config: updatedConfig } : p,
     );
     await storageDB.set("rpc_profiles", allProfiles);
 
-    this.stopPolling();
+    await this.disconnect();
     client = new Aria2Client(updatedConfig);
+    listenersSetup = false;
+    await this.connect();
   },
 
   async connect() {
@@ -236,6 +242,7 @@ export const aria2Store = {
 
     if (!client) {
       client = new Aria2Client(config);
+      listenersSetup = false;
     }
 
     setState("connectionStatus", "connecting");
@@ -257,6 +264,7 @@ export const aria2Store = {
     listenersSetup = false;
     if (client) {
       await client.disconnect();
+      client = null;
     }
     setState("connectionStatus", "disconnected");
     setState("initialFetchDone", false);
@@ -310,17 +318,13 @@ export const aria2Store = {
         return;
       }
 
-      setState("tasks", (prev) => {
-        const next = [...prev];
-        activeTasks.forEach((incoming) => {
-          const index = next.findIndex((t) => t.gid === incoming.gid);
-          if (index !== -1) {
-            next[index] = { ...next[index], ...incoming };
-          } else {
-            next.unshift(incoming);
-          }
-        });
-        return next;
+      activeTasks.forEach((incoming) => {
+        const index = state.tasks.findIndex((t) => t.gid === incoming.gid);
+        if (index !== -1) {
+          setState("tasks", index, reconcile(incoming));
+        } else {
+          setState("tasks", (prev) => [incoming, ...prev]);
+        }
       });
     } catch (e) {
       logger.error(`Failed to update active tasks: ${e}`, LOG_CONTEXT);
@@ -966,44 +970,61 @@ export const aria2Store = {
   },
 
   startPolling() {
-    if (pollingTimer) return;
+    if (pollingTimer !== null) return;
     let pollTicks = 0;
-    pollingTimer = setInterval(async () => {
-      if (state.connectionStatus !== "connected" || !client) return;
-      try {
-        pollTicks++;
-        const promises: Promise<any>[] = [];
+    let isPollingBusy = false;
 
-        // Every 15 ticks (30 seconds), perform a full sync. Otherwise, only update active tasks.
-        if (pollTicks % 15 === 0) {
-          promises.push(this.fetchTasks());
-          promises.push(this.fetchGlobalStat());
-        } else {
-          promises.push(this.updateActiveTasksOnly());
+    const poll = async () => {
+      if (pollingTimer === null) return;
+
+      if (state.connectionStatus === "connected" && client && !isPollingBusy) {
+        isPollingBusy = true;
+        try {
+          pollTicks++;
+          const promises: Promise<any>[] = [];
+
+          // Every 15 ticks (30 seconds), perform a full sync. Otherwise, only update active tasks.
+          if (pollTicks % 15 === 0) {
+            promises.push(this.fetchTasks());
+            promises.push(this.fetchGlobalStat());
+          } else {
+            promises.push(this.updateActiveTasksOnly());
+          }
+
+          if (state.selectedTaskId && state.selectedTaskDetail) {
+            promises.push(this.fetchTaskDetail(state.selectedTaskId));
+          }
+
+          await Promise.all(promises);
+
+          // Update isDownloading based on current tasks
+          const hasActiveTasks = state.tasks.some((t) => t.status === "active");
+
+          if (hasActiveTasks !== state.isDownloading) {
+            setState("isDownloading", hasActiveTasks);
+            logger.info(
+              `Download state changed to: ${hasActiveTasks ? "Active" : "Idle"}`,
+              LOG_CONTEXT,
+            );
+          }
+        } catch (e) {
+          logger.warn(`Polling error: ${e}`, LOG_CONTEXT);
+        } finally {
+          isPollingBusy = false;
         }
-
-        if (state.selectedTaskId && state.selectedTaskDetail) {
-          promises.push(this.fetchTaskDetail(state.selectedTaskId));
-        }
-
-        await Promise.all(promises);
-
-        // Update isDownloading based on current tasks
-        const hasActiveTasks = state.tasks.some((t) => t.status === "active");
-
-        if (hasActiveTasks !== state.isDownloading) {
-          setState("isDownloading", hasActiveTasks);
-          logger.info(`Download state changed to: ${hasActiveTasks ? "Active" : "Idle"}`, LOG_CONTEXT);
-        }
-      } catch (e) {
-        logger.warn(`Polling error: ${e}`, LOG_CONTEXT);
       }
-    }, 2000);
+
+      if (pollingTimer !== null) {
+        pollingTimer = setTimeout(poll, 2000);
+      }
+    };
+
+    pollingTimer = setTimeout(poll, 2000);
   },
 
   stopPolling() {
-    if (pollingTimer) {
-      clearInterval(pollingTimer);
+    if (pollingTimer !== null) {
+      clearTimeout(pollingTimer);
       pollingTimer = null;
     }
   },
