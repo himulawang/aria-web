@@ -90,26 +90,29 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                     class="bg-base-200/40 hover:bg-base-200/70 border-b border-base-200 cursor-pointer font-medium select-none"
                     onClick={() => props.toggleDirCollapse(group.dir)}
                   >
-                    <td class="p-2" onClick={(e) => e.stopPropagation()}>
+                    <td
+                      class="p-2 cursor-pointer"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = new Set(props.selectedTasks);
+                        if (allChecked()) {
+                          group.tasks.forEach((t: any) => next.delete(t.gid));
+                        } else {
+                          group.tasks.forEach((t: any) => next.add(t.gid));
+                        }
+                        props.setSelectedTasks(next);
+                      }}
+                    >
                       <input
                         type="checkbox"
-                        class="checkbox checkbox-sm checkbox-secondary"
+                        class="checkbox checkbox-sm checkbox-secondary pointer-events-none"
                         checked={allChecked()}
                         ref={(el) => {
                           createEffect(() => {
                             const count = group.tasks.filter((t: any) => props.selectedTasks.has(t.gid)).length;
                             el.indeterminate = count > 0 && count < group.tasks.length;
                           });
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={() => {
-                          const next = new Set(props.selectedTasks);
-                          if (allChecked()) {
-                            group.tasks.forEach((t: any) => next.delete(t.gid));
-                          } else {
-                            group.tasks.forEach((t: any) => next.add(t.gid));
-                          }
-                          props.setSelectedTasks(next);
                         }}
                       />
                     </td>
@@ -187,16 +190,18 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                           }`}
                           style="min-height: 32px;"
                         >
-                          <td class="p-2 pl-4" onClick={(e) => e.stopPropagation()}>
+                          <td
+                            class="p-2 pl-4 cursor-pointer"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              props.toggleTask(task.gid);
+                            }}
+                          >
                             <input
                               type="checkbox"
-                              class="checkbox checkbox-sm"
+                              class="checkbox checkbox-sm pointer-events-none"
                               checked={props.selectedTasks.has(task.gid)}
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                props.toggleTask(task.gid);
-                              }}
                             />
                           </td>
                           <td class="p-2 pl-8">

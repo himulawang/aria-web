@@ -15,6 +15,7 @@ import {
   HiOutlineChevronDown,
   HiOutlineChevronDoubleUp,
   HiOutlineChevronDoubleDown,
+  HiOutlineQuestionMarkCircle,
 } from "solid-icons/hi";
 import { FaSolidBroom } from "solid-icons/fa";
 
@@ -296,19 +297,57 @@ const TaskListHeader: Component<TaskListHeaderProps> = (props) => {
             )}
           </For>
         </div>
-        <input
-          type="text"
-          placeholder={t("task-list.search")()}
-          class="input input-sm input-bordered max-w-xs"
-          value={props.searchQuery}
-          onInput={(e) => props.setSearchQuery(e.currentTarget.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              props.setSearchQuery("");
-              e.currentTarget.blur();
-            }
-          }}
-        />
+        <div class="flex items-center gap-1.5">
+          <input
+            type="text"
+            placeholder={t("task-list.search")()}
+            class="input input-sm input-bordered max-w-xs"
+            value={props.searchQuery}
+            onInput={(e) => props.setSearchQuery(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                props.setSearchQuery("");
+                e.currentTarget.blur();
+              }
+            }}
+          />
+          <div class="dropdown dropdown-hover dropdown-end">
+            <div
+              tabindex="0"
+              role="button"
+              class="btn btn-ghost btn-xs btn-circle text-base-content/60 hover:text-primary"
+              title="搜索技巧 (Search Help)"
+            >
+              <HiOutlineQuestionMarkCircle class="w-4 h-4" />
+            </div>
+            <div
+              tabindex="0"
+              class="dropdown-content z-[100] card card-compact w-72 p-3 shadow-xl bg-base-100 border border-base-300 text-xs space-y-2 mt-1"
+            >
+              <div class="font-bold text-primary border-b border-base-200 pb-1">
+                🔍 搜索语法说明 (Search Syntax)
+              </div>
+              <div>
+                <span class="font-semibold text-secondary">1. 通配符 (Wildcards):</span>
+                <ul class="list-disc list-inside text-base-content/80 pl-1 space-y-0.5 mt-0.5">
+                  <li><code class="bg-base-200 px-1 rounded">*.mp4</code> : 匹配所有 mp4 结尾</li>
+                  <li><code class="bg-base-200 px-1 rounded">ubuntu?</code> : 匹配 ubuntu1, ubuntuA</li>
+                </ul>
+              </div>
+              <div>
+                <span class="font-semibold text-secondary">2. 正则表达式 (Regex):</span>
+                <ul class="list-disc list-inside text-base-content/80 pl-1 space-y-0.5 mt-0.5">
+                  <li><code class="bg-base-200 px-1 rounded">/ubuntu-\d+/i</code> : 正则字面量</li>
+                  <li><code class="bg-base-200 px-1 rounded">^\d{4}</code> : 4位数字开头</li>
+                </ul>
+              </div>
+              <div>
+                <span class="font-semibold text-secondary">3. 普通关键词:</span>
+                <p class="text-base-content/80 mt-0.5 pl-1">模糊匹配文件名、目录及 GID。</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -153,13 +153,36 @@ const TaskList: Component<TaskListProps> = (props) => {
     const query = searchQuery().trim();
     if (query) {
       let isMatch: (val: string) => boolean;
-      if (query.includes("*") || query.includes("?")) {
+
+      if (query.startsWith("/") && (query.endsWith("/") || /\/[gimsuy]*$/.test(query))) {
+        try {
+          const match = query.match(/^\/(.+)\/([gimsuy]*)$/);
+          if (match) {
+            const regex = new RegExp(match[1], match[2] || "i");
+            isMatch = (val: string) => regex.test(val);
+          } else {
+            const regex = new RegExp(query.slice(1, -1), "i");
+            isMatch = (val: string) => regex.test(val);
+          }
+        } catch {
+          const lowerQuery = query.toLowerCase();
+          isMatch = (val: string) => val.toLowerCase().includes(lowerQuery);
+        }
+      } else if (query.includes("*") || query.includes("?")) {
         const escaped = query.replace(/[.+^${}()|[\]\\]/g, '\\$&');
         const regexStr = escaped.replace(/\*/g, '.*').replace(/\?/g, '.');
         try {
           const regex = new RegExp(`^${regexStr}$`, "i");
           isMatch = (val: string) => regex.test(val);
-        } catch (err) {
+        } catch {
+          const lowerQuery = query.toLowerCase();
+          isMatch = (val: string) => val.toLowerCase().includes(lowerQuery);
+        }
+      } else if (/[^a-zA-Z0-9\s_\-\.]/.test(query)) {
+        try {
+          const regex = new RegExp(query, "i");
+          isMatch = (val: string) => regex.test(val);
+        } catch {
           const lowerQuery = query.toLowerCase();
           isMatch = (val: string) => val.toLowerCase().includes(lowerQuery);
         }
@@ -170,8 +193,21 @@ const TaskList: Component<TaskListProps> = (props) => {
 
       result = result.filter((t) => {
         const name = t.files[0]?.path?.split("/").pop() || "";
+        const btName = (t as any).bittorrent?.info?.name || "";
         const directory = t.dir || "";
-        return isMatch(name) || isMatch(directory);
+        const gid = t.gid || "";
+        const hasMatchingFile = t.files?.some((f: any) => {
+          const fName = f.path?.split("/").pop() || "";
+          return isMatch(fName) || isMatch(f.path || "");
+        });
+
+        return (
+          isMatch(name) ||
+          isMatch(btName) ||
+          isMatch(directory) ||
+          isMatch(gid) ||
+          hasMatchingFile
+        );
       });
     }
 
