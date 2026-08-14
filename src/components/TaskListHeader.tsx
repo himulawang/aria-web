@@ -16,6 +16,7 @@ import {
   HiOutlineChevronDoubleUp,
   HiOutlineChevronDoubleDown,
   HiOutlineQuestionMarkCircle,
+  HiOutlineBolt,
 } from "solid-icons/hi";
 import { FaSolidBroom } from "solid-icons/fa";
 
@@ -311,6 +312,28 @@ const TaskListHeader: Component<TaskListHeaderProps> = (props) => {
               }
             }}
           />
+          <button
+            type="button"
+            onClick={() => {
+              if (props.searchQuery === "^0.\\.mp4$|^第.集.mp4$") {
+                props.setSearchQuery("");
+              } else {
+                props.setSearchQuery("^0.\\.mp4$|^第.集.mp4$");
+              }
+            }}
+            class={`btn btn-sm btn-square transition-colors ${
+              props.searchQuery === "^0.\\.mp4$|^第.集.mp4$"
+                ? "btn-primary text-primary-content shadow-sm"
+                : "btn-ghost text-base-content/70 hover:text-primary"
+            }`}
+            title={
+              props.searchQuery === "^0.\\.mp4$|^第.集.mp4$"
+                ? "取消快捷规则 (Clear filter)"
+                : "快捷规则: ^0.\\.mp4$|^第.集.mp4$"
+            }
+          >
+            <HiOutlineBolt class="w-4 h-4" />
+          </button>
           <div class="dropdown dropdown-hover dropdown-end">
             <div
               tabindex="0"
