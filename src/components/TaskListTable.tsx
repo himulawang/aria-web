@@ -1,5 +1,6 @@
 import { type Component, For, Show, createEffect } from "solid-js";
 import { aria2Store } from "../store";
+import { notificationStore } from "../store/notification-store";
 import { t } from "../i18n";
 import { formatSpeed, formatSize } from "../utils/format";
 import {
@@ -7,6 +8,9 @@ import {
   HiOutlineFolder,
   HiOutlineFolderOpen,
   HiOutlineInformationCircle,
+  HiOutlineSparkles,
+  HiOutlineChevronDoubleUp,
+  HiOutlineChevronDoubleDown,
 } from "solid-icons/hi";
 
 interface TaskListTableProps {
@@ -41,6 +45,21 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
       default:
         return "badge-ghost";
     }
+  };
+
+  const queueRankMap = () => {
+    const map = new Map<string, { type: "active" | "waiting"; rank: number }>();
+    let activeIndex = 1;
+    let waitingIndex = 1;
+
+    for (const task of state.tasks) {
+      if (task.status === "active") {
+        map.set(task.gid, { type: "active", rank: activeIndex++ });
+      } else if (task.status === "waiting" || task.status === "paused") {
+        map.set(task.gid, { type: "waiting", rank: waitingIndex++ });
+      }
+    }
+    return map;
   };
 
   return (
@@ -151,22 +170,81 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                       </div>
                     </td>
                     <td class="p-2 text-right">
-                      <div class="flex items-center justify-end gap-2">
+                      <div class="flex items-center justify-end gap-1.5">
                         <Show when={group.totalSpeed > 0}>
-                          <span class="text-xs opacity-60 font-semibold text-success w-24 text-right font-mono inline-block">
+                          <span class="text-xs opacity-60 font-semibold text-success w-20 text-right font-mono inline-block">
                             {formatSpeed(group.totalSpeed)}
                           </span>
                         </Show>
                         <Show when={group.activeCount > 0}>
-                          <span class="badge badge-sm badge-primary text-xs shrink-0">
-                            {group.activeCount} active
+                          <span class="badge badge-sm badge-primary text-xs shrink-0 font-mono" title={t("task-list.queue-active")()}>
+                            ⚡ {group.activeCount}
                           </span>
                         </Show>
-                        <Show when={group.pausedCount > 0}>
-                          <span class="badge badge-sm badge-warning text-xs shrink-0">
-                            {group.pausedCount} paused
-                          </span>
-                        </Show>
+                        {(() => {
+                          const ranks = group.tasks
+                            .map((t: any) => queueRankMap().get(t.gid))
+                            .filter((r: any) => r && r.type === "waiting")
+                            .map((r: any) => r.rank);
+                          if (ranks.length === 0) return null;
+                          const min = Math.min(...ranks);
+                          const max = Math.max(...ranks);
+                          const label = min === max ? `#${min}` : `#${min}~#${max}`;
+                          return (
+                            <span
+                              class="badge badge-sm badge-outline badge-info text-xs shrink-0 font-mono"
+                              title={t("task-list.queue-rank")()}
+                            >
+                              {label}
+                            </span>
+                          );
+                        })()}
+
+                        {/* Directory Quick Actions: Natural Sort & Priority Shift */}
+                        <div class="flex items-center gap-0.5 ml-1" onMouseDown={(e) => e.stopPropagation()}>
+                          <button
+                            class="btn btn-xs btn-ghost btn-square text-warning hover:bg-warning/20"
+                            title={t("task-list.sort-directory-natural")()}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await aria2Store.sortDirectoryTasksNaturally(group.dir);
+                              notificationStore.add(
+                                `${t("task-list.sort-directory-natural")()}: ${group.dir.split("/").pop() || group.dir}`,
+                                "success",
+                              );
+                            }}
+                          >
+                            <HiOutlineSparkles class="w-4 h-4" />
+                          </button>
+                          <button
+                            class="btn btn-xs btn-ghost btn-square text-info hover:bg-info/20"
+                            title={t("task-list.move-dir-top")()}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await aria2Store.moveDirectoryTasksToTop(group.dir);
+                              notificationStore.add(
+                                `${t("task-list.move-dir-top")()}: ${group.dir.split("/").pop() || group.dir}`,
+                                "info",
+                              );
+                            }}
+                          >
+                            <HiOutlineChevronDoubleUp class="w-4 h-4" />
+                          </button>
+                          <button
+                            class="btn btn-xs btn-ghost btn-square text-info hover:bg-info/20"
+                            title={t("task-list.move-dir-bottom")()}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await aria2Store.moveDirectoryTasksToBottom(group.dir);
+                              notificationStore.add(
+                                `${t("task-list.move-dir-bottom")()}: ${group.dir.split("/").pop() || group.dir}`,
+                                "info",
+                              );
+                            }}
+                          >
+                            <HiOutlineChevronDoubleDown class="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </td>
                     <td class="p-2 text-left text-xs max-w-[200px] truncate opacity-50" title={group.dir}>
@@ -207,6 +285,32 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                           <td class="p-2 pl-8">
                             <div class="flex items-center gap-2">
                               <span class="text-base-content/30 select-none">└─</span>
+                              {(() => {
+                                const info = queueRankMap().get(task.gid);
+                                if (!info) return null;
+                                if (info.type === "active") {
+                                  return (
+                                    <span
+                                      class="badge badge-xs badge-primary font-mono shrink-0 px-1 font-bold"
+                                      title={`${t("task-list.queue-active")()} #${info.rank}`}
+                                    >
+                                      ⚡ #{info.rank}
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <span
+                                    class={`badge badge-xs font-mono shrink-0 px-1 ${
+                                      info.rank <= 3
+                                        ? "badge-secondary font-bold"
+                                        : "badge-ghost opacity-80"
+                                    }`}
+                                    title={`${t("task-list.queue-rank")()} #${info.rank}`}
+                                  >
+                                    #{info.rank}
+                                  </span>
+                                );
+                              })()}
                               <span class="truncate max-w-sm block text-sm font-medium text-base-content/90">
                                 {task.files[0]?.path?.split("/").pop() ||
                                   t("task-status.unknown")()}
@@ -287,3 +391,4 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
 };
 
 export default TaskListTable;
+

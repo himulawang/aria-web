@@ -2,6 +2,7 @@ import { createSignal, Show, type Component } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
 import { notificationStore } from "../store/notification-store";
+import { naturalCompare } from "../utils/natural-sort";
 
 interface AddTaskProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ interface AddTaskProps {
 const AddTask: Component<AddTaskProps> = (props) => {
   const [tab, setTab] = createSignal<"urls" | "file">("urls");
   const [urls, setUrls] = createSignal("");
+  const [naturalSort, setNaturalSort] = createSignal(true);
   const [file, setFile] = createSignal<{
     name: string;
     content: string;
@@ -47,9 +49,13 @@ const AddTask: Component<AddTaskProps> = (props) => {
 
     try {
       if (tab() === "urls") {
-        const urlsArray = urls()
+        const lines = urls()
           .split("\n")
-          .filter((u) => u.trim() !== "");
+          .map((u) => u.trim())
+          .filter((u) => u !== "");
+        const urlsArray = naturalSort()
+          ? [...lines].sort((a, b) => naturalCompare(a, b))
+          : lines;
         await aria2Store.addTask(urlsArray, finalOptions);
       } else if (tab() === "file" && file()) {
         if (file()!.type === "torrent") {
@@ -87,11 +93,24 @@ const AddTask: Component<AddTaskProps> = (props) => {
       <div class="p-2">
         <Show when={tab() === "urls"}>
           <textarea
-            class="textarea textarea-bordered w-full h-32"
+            class="textarea textarea-bordered w-full h-32 font-mono text-xs"
             placeholder={t("new-task.placeholder-urls")()}
             value={urls()}
             onInput={(e) => setUrls(e.currentTarget.value)}
           />
+          <div class="mt-2 flex items-center justify-between">
+            <label class="label cursor-pointer gap-2 py-0">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-xs checkbox-primary"
+                checked={naturalSort()}
+                onChange={(e) => setNaturalSort(e.currentTarget.checked)}
+              />
+              <span class="label-text text-xs font-medium">
+                {t("new-task.natural-sort")()}
+              </span>
+            </label>
+          </div>
         </Show>
 
         <Show when={tab() === "file"}>

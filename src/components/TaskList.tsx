@@ -2,6 +2,7 @@ import { createSignal, type Component, Show, createEffect } from "solid-js";
 import { Portal } from "solid-js/web";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
+import { naturalCompare, getTaskFileName } from "../utils/natural-sort";
 import AddTask from "./AddTask";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import TaskListHeader from "./TaskListHeader";
@@ -218,9 +219,9 @@ const TaskList: Component<TaskListProps> = (props) => {
         let valA: any, valB: any;
         switch (key) {
           case "name":
-            valA = a.files[0]?.path?.split("/").pop() || "";
-            valB = b.files[0]?.path?.split("/").pop() || "";
-            break;
+            valA = getTaskFileName(a);
+            valB = getTaskFileName(b);
+            return dir === "asc" ? naturalCompare(valA, valB) : naturalCompare(valB, valA);
           case "size":
             valA = a.totalLength || 0;
             valB = b.totalLength || 0;
@@ -338,7 +339,7 @@ const TaskList: Component<TaskListProps> = (props) => {
       }
     }
 
-    sortedGroups.sort((a, b) => a.dir.localeCompare(b.dir));
+    sortedGroups.sort((a, b) => naturalCompare(a.dir, b.dir));
     return sortedGroups;
   };
 
@@ -352,25 +353,8 @@ const TaskList: Component<TaskListProps> = (props) => {
   };
 
   const arrangePriorityByDirectory = async () => {
-    const queueable = state.tasks.filter(
-      (t) => t.status === "active" || t.status === "waiting" || t.status === "paused"
-    );
-    if (queueable.length <= 1) return;
-
-    const sorted = [...queueable].sort((a, b) => {
-      const dirA = a.dir || "";
-      const dirB = b.dir || "";
-      const dirCompare = dirA.localeCompare(dirB);
-      if (dirCompare !== 0) return dirCompare;
-
-      const nameA = a.files[0]?.path?.split("/").pop() || "";
-      const nameB = b.files[0]?.path?.split("/").pop() || "";
-      return nameA.localeCompare(nameB);
-    });
-
-    const gids = sorted.map((t) => t.gid);
     try {
-      await aria2Store.changePositions(gids, 0, "POS_SET");
+      await aria2Store.arrangeAllTasksByDirectoryAndNatural();
     } catch (e) {
       console.error("Failed to rearrange download queue by directory:", e);
     }

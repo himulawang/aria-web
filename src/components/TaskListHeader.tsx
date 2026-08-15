@@ -17,6 +17,7 @@ import {
   HiOutlineChevronDoubleDown,
   HiOutlineQuestionMarkCircle,
   HiOutlineBolt,
+  HiOutlineSparkles,
 } from "solid-icons/hi";
 import { FaSolidBroom } from "solid-icons/fa";
 
@@ -148,7 +149,7 @@ const TaskListHeader: Component<TaskListHeaderProps> = (props) => {
                 <button
                   onClick={props.arrangePriorityByDirectory}
                   class="btn btn-sm btn-ghost btn-square text-info"
-                  title="Arrange Download Queue by Directory"
+                  title={t("task-list.arrange-by-dir-natural")()}
                 >
                   <HiOutlineQueueList class="w-5 h-5" />
                 </button>
@@ -196,6 +197,21 @@ const TaskListHeader: Component<TaskListHeaderProps> = (props) => {
               disabled={!hasNonCompletedTasks()}
             >
               <HiOutlinePlay class="w-5 h-5" />
+            </button>
+
+            {/* Natural Sort Selected Tasks */}
+            <button
+              onClick={async () => {
+                const gids = getMovableGids();
+                if (gids.length > 0) {
+                  await aria2Store.sortSelectedTasksNaturally(gids);
+                }
+              }}
+              class="btn btn-sm btn-ghost btn-square text-warning"
+              title={t("task-list.sort-selected-natural")()}
+              disabled={getMovableGids().length <= 1}
+            >
+              <HiOutlineSparkles class="w-5 h-5" />
             </button>
 
             {/* Batch Move Buttons */}

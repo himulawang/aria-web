@@ -7,6 +7,7 @@ import { logger } from "../core/logger";
 import { notificationStore } from "./notification-store";
 import { DEFAULT_APP_SETTINGS } from "../config/app-settings";
 import type { AppSettings } from "../config/app-settings";
+import { naturalCompare, getTaskFileName } from "../utils/natural-sort";
 
 interface GlobalStat {
   activeDownloads: number;
@@ -835,6 +836,110 @@ export const aria2Store = {
       throw e;
     }
   },
+
+  async reorderGlobalQueue(targetGids: string[]): Promise<void> {
+    if (!client) await this.connect();
+    if (!targetGids || targetGids.length === 0) return;
+    try {
+      const calls = [...targetGids].reverse().map((gid) => ({
+        method: "aria2.changePosition",
+        params: [gid, 0, "POS_SET"],
+      }));
+      await client!.multicall(calls);
+      await this.fetchTasks();
+    } catch (e) {
+      logger.error(`Failed to reorder global queue: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async sortSelectedTasksNaturally(gids: string[]): Promise<void> {
+    const selectedSet = new Set(gids);
+    const waitingTasks = state.tasks.filter(
+      (t) => t.status === "waiting" || t.status === "paused",
+    );
+    const selectedWaitingTasks = waitingTasks.filter((t) => selectedSet.has(t.gid));
+    if (selectedWaitingTasks.length <= 1) return;
+
+    const slotIndices: number[] = [];
+    waitingTasks.forEach((t, index) => {
+      if (selectedSet.has(t.gid)) {
+        slotIndices.push(index);
+      }
+    });
+
+    const sortedSelected = [...selectedWaitingTasks].sort((a, b) => {
+      const nameA = getTaskFileName(a);
+      const nameB = getTaskFileName(b);
+      return naturalCompare(nameA, nameB);
+    });
+
+    const newWaitingList = [...waitingTasks];
+    slotIndices.forEach((slotIdx, i) => {
+      newWaitingList[slotIdx] = sortedSelected[i];
+    });
+
+    const targetGids = newWaitingList.map((t) => t.gid);
+    await this.reorderGlobalQueue(targetGids);
+  },
+
+  async sortDirectoryTasksNaturally(dir: string): Promise<void> {
+    const dirMatches = (t: any) => (t.dir || "Default") === (dir || "Default");
+    const dirGids = state.tasks
+      .filter((t) => (t.status === "waiting" || t.status === "paused") && dirMatches(t))
+      .map((t) => t.gid);
+    await this.sortSelectedTasksNaturally(dirGids);
+  },
+
+  async moveDirectoryTasksToTop(dir: string): Promise<void> {
+    const waitingTasks = state.tasks.filter(
+      (t) => t.status === "waiting" || t.status === "paused",
+    );
+    const dirMatches = (t: any) => (t.dir || "Default") === (dir || "Default");
+    const thisDir = waitingTasks.filter(dirMatches);
+    const others = waitingTasks.filter((t) => !dirMatches(t));
+    if (thisDir.length === 0) return;
+    const targetGids = [...thisDir, ...others].map((t) => t.gid);
+    await this.reorderGlobalQueue(targetGids);
+  },
+
+  async moveDirectoryTasksToBottom(dir: string): Promise<void> {
+    const waitingTasks = state.tasks.filter(
+      (t) => t.status === "waiting" || t.status === "paused",
+    );
+    const dirMatches = (t: any) => (t.dir || "Default") === (dir || "Default");
+    const thisDir = waitingTasks.filter(dirMatches);
+    const others = waitingTasks.filter((t) => !dirMatches(t));
+    if (thisDir.length === 0) return;
+    const targetGids = [...others, ...thisDir].map((t) => t.gid);
+    await this.reorderGlobalQueue(targetGids);
+  },
+
+  async arrangeAllTasksByDirectoryAndNatural(): Promise<void> {
+    const waitingTasks = state.tasks.filter(
+      (t) => t.status === "waiting" || t.status === "paused",
+    );
+    if (waitingTasks.length <= 1) return;
+
+    const map = new Map<string, any[]>();
+    for (const task of waitingTasks) {
+      const d = task.dir || "Default";
+      if (!map.has(d)) map.set(d, []);
+      map.get(d)!.push(task);
+    }
+
+    const sortedDirs = Array.from(map.keys()).sort((a, b) => naturalCompare(a, b));
+    const result: any[] = [];
+    for (const d of sortedDirs) {
+      const tasksInDir = map.get(d)!;
+      tasksInDir.sort((a, b) => naturalCompare(getTaskFileName(a), getTaskFileName(b)));
+      result.push(...tasksInDir);
+    }
+
+    const targetGids = result.map((t) => t.gid);
+    await this.reorderGlobalQueue(targetGids);
+  },
+
 
   async getAllGlobalOptions() {
     if (!client) await this.connect();
