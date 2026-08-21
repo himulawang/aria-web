@@ -8,8 +8,10 @@ interface TaskDetailExportProps {
   onCancel: () => void;
 }
 
+type ExportType = "cli" | "curl" | "wget" | "rpc";
+
 export const TaskDetailExport: Component<TaskDetailExportProps> = (props) => {
-  const [exportType, setExportType] = createSignal<"cli" | "rpc">("cli");
+  const [exportType, setExportType] = createSignal<ExportType>("cli");
   const [exportCommand, setExportCommand] = createSignal("");
 
   const getFirstUrl = () => {
@@ -17,29 +19,53 @@ export const TaskDetailExport: Component<TaskDetailExportProps> = (props) => {
     return props.task?.files?.[0]?.uris?.[0]?.uri || "";
   };
 
+  const getFileName = () => {
+    return props.task?.out || props.task?.files?.[0]?.path?.split("/").pop() || "download";
+  };
+
   createEffect(() => {
     const task = props.task;
     if (!task) return;
 
     const url = getFirstUrl();
-    if (exportType() === "cli") {
+    const fileName = getFileName();
+    const type = exportType();
+
+    if (type === "cli") {
       let cmd = `aria2c "${url}"`;
       if (task.dir) cmd += ` --dir="${task.dir}"`;
-      if (task.out) cmd += ` --out="${task.out}"`;
+      if (fileName) cmd += ` --out="${fileName}"`;
       if (task.split) cmd += ` --split=${task.split}`;
+      if (task.maxConnectionPerServer) cmd += ` --max-connection-per-server=${task.maxConnectionPerServer}`;
+      setExportCommand(cmd);
+    } else if (type === "curl") {
+      let cmd = `curl -L "${url}" -o "${fileName}"`;
+      if (task.header && Array.isArray(task.header)) {
+        task.header.forEach((h: string) => {
+          cmd += ` -H "${h}"`;
+        });
+      }
+      setExportCommand(cmd);
+    } else if (type === "wget") {
+      let cmd = `wget -c -O "${fileName}" "${url}"`;
+      if (task.header && Array.isArray(task.header)) {
+        task.header.forEach((h: string) => {
+          cmd += ` --header="${h}"`;
+        });
+      }
       setExportCommand(cmd);
     } else {
       const rpc = {
         method: "aria2.addUri",
         params: [
-          "token:your_token",
+          "token:YOUR_TOKEN",
           [[url]],
           {
             dir: task.dir,
-            out: task.out,
-            split: task.split,
-          }
-        ]
+            out: fileName,
+            split: task.split || "16",
+          },
+        ],
       };
       setExportCommand(JSON.stringify(rpc, null, 2));
     }
@@ -73,7 +99,19 @@ export const TaskDetailExport: Component<TaskDetailExportProps> = (props) => {
             class={`tab tab-sm flex-1 font-semibold ${exportType() === "cli" ? "tab-active bg-base-100 shadow-sm" : ""}`}
             onClick={() => setExportType("cli")}
           >
-            aria2c CLI
+            aria2c
+          </button>
+          <button
+            class={`tab tab-sm flex-1 font-semibold ${exportType() === "curl" ? "tab-active bg-base-100 shadow-sm" : ""}`}
+            onClick={() => setExportType("curl")}
+          >
+            cURL
+          </button>
+          <button
+            class={`tab tab-sm flex-1 font-semibold ${exportType() === "wget" ? "tab-active bg-base-100 shadow-sm" : ""}`}
+            onClick={() => setExportType("wget")}
+          >
+            Wget
           </button>
           <button
             class={`tab tab-sm flex-1 font-semibold ${exportType() === "rpc" ? "tab-active bg-base-100 shadow-sm" : ""}`}
