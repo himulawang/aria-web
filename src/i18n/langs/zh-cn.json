@@ -178,6 +178,7 @@
   "task-detail.pause": "暂停",
   "task-detail.peers.empty": "未找到 Peer",
   "task-detail.peers.loading": "加载 Peer 中...",
+  "task-detail.pieceMap": "分片完成度矩阵",
   "task-detail.progress": "进度",
   "task-detail.resume": "恢复",
   "task-detail.show-api": "显示命令 / API",
