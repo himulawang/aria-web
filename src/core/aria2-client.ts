@@ -9,11 +9,16 @@ export class Aria2Client {
   private config: Aria2Config;
   private httpClient: HttpRpcClient;
   private wsClient: WebSocketRpcClient;
+  private isFallbackToHttp = false;
 
   constructor(config: Aria2Config) {
     this.config = config;
     this.httpClient = new HttpRpcClient(config);
     this.wsClient = new WebSocketRpcClient(config);
+  }
+
+  getProtocol(): "WebSocket" | "HTTP" {
+    return this.config.useWebSocket && !this.isFallbackToHttp ? "WebSocket" : "HTTP";
   }
 
   async request<T>(
@@ -30,8 +35,15 @@ export class Aria2Client {
       requestParams.unshift(`token:${this.config.token}`);
     }
 
-    if (this.config.useWebSocket) {
-      return this.wsClient.request<T>(method, requestParams);
+    if (this.config.useWebSocket && !this.isFallbackToHttp) {
+      try {
+        return await this.wsClient.request<T>(method, requestParams);
+      } catch (wsErr) {
+        // If WS request fails due to socket closing, fallback to HTTP seamlessly
+        logger.warn(`WS request failed (${wsErr}), attempting fallback to HTTP`, LOG_CONTEXT);
+        this.isFallbackToHttp = true;
+        return this.httpClient.request<T>(method, requestParams);
+      }
     }
     return this.httpClient.request<T>(method, requestParams);
   }
@@ -66,9 +78,8 @@ export class Aria2Client {
         "Testing connection with aria2.getGlobalStat...",
         LOG_CONTEXT,
       );
-      // 调用一个无需参数且轻量的接口来验证
       await this.request("aria2.getGlobalStat");
-      logger.info("Connection test passed!", LOG_CONTEXT);
+      logger.info(`Connection test passed via ${this.getProtocol()}!`, LOG_CONTEXT);
       return true;
     } catch (e) {
       logger.error(`Connection test failed: ${e}`, LOG_CONTEXT);
@@ -77,26 +88,37 @@ export class Aria2Client {
   }
 
   async connect() {
-    if (this.config.useWebSocket) {
-      await this.wsClient.connect();
+    this.isFallbackToHttp = false;
 
-      // Debug: List available methods to diagnose "No such method" errors
+    if (this.config.useWebSocket) {
       try {
-        const methods = await this.request("system.listMethods");
-        logger.debug(
-          `Available RPC methods: ${JSON.stringify(methods)}`,
+        logger.info("Attempting WebSocket connection...", LOG_CONTEXT);
+        await this.wsClient.connect();
+
+        // Check if WS can actually communicate with token
+        const isOk = await this.testConnection();
+        if (isOk) {
+          logger.info("WebSocket connection established and verified", LOG_CONTEXT);
+          return;
+        }
+        throw new Error("WebSocket authentication check failed");
+      } catch (wsErr) {
+        logger.warn(
+          `WebSocket connection failed (${wsErr}). Falling back to HTTP POST RPC...`,
           LOG_CONTEXT,
         );
-      } catch (e) {
-        logger.warn(`Could not list methods: ${e}`, LOG_CONTEXT);
+        this.isFallbackToHttp = true;
+        const httpOk = await this.testConnection();
+        if (!httpOk) {
+          throw new Error("Aria2 RPC authentication failed or server unreachable via both WS and HTTP");
+        }
+        logger.info("HTTP RPC fallback connection established and verified", LOG_CONTEXT);
+        return;
       }
-
-      // 连接建立后立即验证
+    } else {
       const isOk = await this.testConnection();
       if (!isOk) {
-        throw new Error(
-          "Aria2 RPC authentication failed or server unreachable",
-        );
+        throw new Error("Aria2 RPC authentication failed or server unreachable via HTTP");
       }
     }
   }
@@ -105,5 +127,6 @@ export class Aria2Client {
     if (this.config.useWebSocket) {
       await this.wsClient.disconnect();
     }
+    this.isFallbackToHttp = false;
   }
 }

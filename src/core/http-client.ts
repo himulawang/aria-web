@@ -20,17 +20,30 @@ export class HttpRpcClient {
         return headers;
     }
 
+    private getHttpUrl(): string {
+        let url = this.config.url;
+        if (url.startsWith("ws://")) {
+            url = url.replace("ws://", "http://");
+        } else if (url.startsWith("wss://")) {
+            url = url.replace("wss://", "https://");
+        }
+        if (!url.endsWith("/jsonrpc") && !url.includes("/jsonrpc")) {
+            url = url.replace(/\/$/, "") + "/jsonrpc";
+        }
+        return url;
+    }
+
     async request<T>(method: string, params: any[] = []): Promise<T> {
         const id = Math.random().toString(36).substring(2, 15);
         const body: RpcRequest = { jsonrpc: "2.0", id, method, params };
 
-        let url = this.config.url;
+        let url = this.getHttpUrl();
         let options: RequestInit = {
-            method: this.config.httpMethod,
+            method: this.config.httpMethod || "POST",
             headers: this.getHeaders(),
         };
 
-        if (this.config.httpMethod === "POST") {
+        if (options.method === "POST") {
             options.body = JSON.stringify(body);
         } else {
             const query = new URLSearchParams();
