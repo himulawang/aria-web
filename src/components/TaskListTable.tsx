@@ -65,10 +65,208 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
 
   return (
     <div class="overflow-auto flex-1 bg-base-100 rounded-box border border-base-300">
-      <table class="table table-zebra w-full">
+      {/* ========================================================================= */}
+      {/* 1. Mobile Cards View (Visible on screens < 768px: md:hidden)             */}
+      {/* ========================================================================= */}
+      <div class="block md:hidden divide-y divide-base-200">
+        <For
+          each={props.groupedTasks}
+          fallback={
+            <div class="text-center py-12 text-base-content/60 text-sm">
+              {t("task-status.empty")() || "暂无下载任务"}
+            </div>
+          }
+        >
+          {(group) => {
+            const allChecked = () => group.tasks.every((t: any) => props.selectedTasks.has(t.gid));
+
+            return (
+              <div class="bg-base-100">
+                {/* Mobile Group Header */}
+                <div
+                  class="bg-base-200/60 p-3 flex items-center justify-between cursor-pointer select-none border-b border-base-200"
+                  onClick={() => props.toggleDirCollapse(group.dir)}
+                >
+                  <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <div
+                      class="cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = new Set(props.selectedTasks);
+                        if (allChecked()) {
+                          group.tasks.forEach((t: any) => next.delete(t.gid));
+                        } else {
+                          group.tasks.forEach((t: any) => next.add(t.gid));
+                        }
+                        props.setSelectedTasks(next);
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        class="checkbox checkbox-sm checkbox-secondary pointer-events-none"
+                        checked={allChecked()}
+                        ref={(el) => {
+                          el.indeterminate =
+                            group.tasks.some((t: any) => props.selectedTasks.has(t.gid)) &&
+                            !group.tasks.every((t: any) => props.selectedTasks.has(t.gid));
+                        }}
+                      />
+                    </div>
+                    <HiOutlineChevronDown
+                      class={`w-4 h-4 text-base-content/50 transition-transform duration-200 shrink-0 ${
+                        props.collapsedDirs.has(group.dir) ? "-rotate-90" : ""
+                      }`}
+                    />
+                    <span class="truncate font-semibold text-sm">
+                      {group.dir.split("/").pop() || group.dir}
+                    </span>
+                    <span class="badge badge-xs badge-ghost shrink-0">{group.tasks.length}</span>
+                  </div>
+
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-xs font-mono font-medium text-base-content/70">
+                      {formatSize(group.totalSize)}
+                    </span>
+                    <div class="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        class="btn btn-xs btn-ghost btn-square text-warning"
+                        title={t("task-list.sort-directory-natural")()}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await aria2Store.sortDirectoryTasksNaturally(group.dir);
+                          notificationStore.add(
+                            `${t("task-list.sort-directory-natural")()}: ${group.dir.split("/").pop() || group.dir}`,
+                            "success",
+                          );
+                        }}
+                      >
+                        <HiOutlineSparkles class="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile Tasks List */}
+                <Show when={!props.collapsedDirs.has(group.dir)}>
+                  <div class="divide-y divide-base-200/60 pl-2">
+                    <For each={group.tasks}>
+                      {(task) => {
+                        const progress =
+                          task.totalLength > 0
+                            ? Math.min(100, Math.round((task.completedLength / task.totalLength) * 100))
+                            : 0;
+                        const rankInfo = queueRankMap().get(task.gid);
+                        const rule = matchTaskRule(task, state.schedulerConfig.rules || []);
+
+                        return (
+                          <div
+                            class={`p-3 space-y-2 cursor-pointer transition-colors ${
+                              state.selectedTaskId === task.gid ? "bg-primary/10" : "hover:bg-base-200/40"
+                            }`}
+                            onClick={() => aria2Store.showTaskDetail(task.gid)}
+                          >
+                            {/* Task Name & Selection */}
+                            <div class="flex items-start gap-2">
+                              <div
+                                class="pt-0.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  props.toggleTask(task.gid);
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  class="checkbox checkbox-xs pointer-events-none"
+                                  checked={props.selectedTasks.has(task.gid)}
+                                />
+                              </div>
+
+                              <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap mb-1">
+                                  {/* Queue Rank Badge */}
+                                  <Show when={rankInfo}>
+                                    <span
+                                      class={`badge badge-xs font-mono shrink-0 font-bold ${
+                                        rankInfo?.type === "active"
+                                          ? "badge-primary"
+                                          : rankInfo?.rank && rankInfo.rank <= 3
+                                          ? "badge-secondary"
+                                          : "badge-ghost opacity-80"
+                                      }`}
+                                    >
+                                      {rankInfo?.type === "active" ? `⚡ #${rankInfo?.rank}` : `#${rankInfo?.rank}`}
+                                    </span>
+                                  </Show>
+
+                                  {/* Provider Badge */}
+                                  <Show when={rule}>
+                                    <span
+                                      class="badge badge-xs font-semibold shrink-0 text-white"
+                                      style={{ "background-color": rule?.badgeColor || "#3b82f6" }}
+                                    >
+                                      {rule?.name}
+                                    </span>
+                                  </Show>
+
+                                  {/* Status Badge */}
+                                  <span class={`badge badge-xs ${getStatusStyle(task.status)}`}>
+                                    {t(`task-status.${task.status}`)()}
+                                  </span>
+                                </div>
+
+                                <div class="text-sm font-medium text-base-content/90 break-all line-clamp-2">
+                                  {task.files[0]?.path?.split("/").pop() || t("task-status.unknown")()}
+                                </div>
+                              </div>
+
+                              <button
+                                class="btn btn-xs btn-ghost btn-square text-primary shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  aria2Store.showTaskDetail(task.gid);
+                                }}
+                              >
+                                <HiOutlineInformationCircle class="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div class="space-y-1">
+                              <progress
+                                class="progress progress-primary w-full h-1.5"
+                                value={progress}
+                                max="100"
+                              />
+                              <div class="flex items-center justify-between text-xs text-base-content/70 font-mono">
+                                <span>
+                                  {formatSize(Number(task.completedLength))} / {formatSize(Number(task.totalLength))} ({progress}%)
+                                </span>
+                                <Show when={task.status === "active" && Number(task.downloadSpeed) > 0}>
+                                  <span class="text-success font-semibold">
+                                    ⚡ {formatSpeed(Number(task.downloadSpeed))}
+                                  </span>
+                                </Show>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    </For>
+                  </div>
+                </Show>
+              </div>
+            );
+          }}
+        </For>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. Desktop Table View (Visible on md: and up)                             */}
+      {/* ========================================================================= */}
+      <table class="hidden md:table table table-zebra w-full">
         <thead>
           <tr>
-            <th>
+            <th class="w-10">
               <input
                 type="checkbox"
                 class="checkbox checkbox-sm"
@@ -83,19 +281,19 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
               {t("task-list.title")()}{" "}
               {props.sortKey === "name" && (props.sortDirection === "asc" ? "↑" : "↓")}
             </th>
-            <th class="cursor-pointer hover:text-primary" onClick={() => props.toggleSort("size")}>
+            <th class="cursor-pointer hover:text-primary w-28" onClick={() => props.toggleSort("size")}>
               {t("task-detail.totalSize")().replace(/[:：]/g, "")}{" "}
               {props.sortKey === "size" && (props.sortDirection === "asc" ? "↑" : "↓")}
             </th>
-            <th class="cursor-pointer hover:text-primary" onClick={() => props.toggleSort("progress")}>
+            <th class="cursor-pointer hover:text-primary w-40" onClick={() => props.toggleSort("progress")}>
               {t("task-detail.progress")()}{" "}
               {props.sortKey === "progress" && (props.sortDirection === "asc" ? "↑" : "↓")}
             </th>
-            <th class="text-right cursor-pointer hover:text-primary" onClick={() => props.toggleSort("status")}>
+            <th class="text-right cursor-pointer hover:text-primary w-44" onClick={() => props.toggleSort("status")}>
               {t("nav.status")()}{" "}
               {props.sortKey === "status" && (props.sortDirection === "asc" ? "↑" : "↓")}
             </th>
-            <th class="text-left">{t("task-detail.directory")()}</th>
+            <th class="text-left w-36">{t("task-detail.directory")()}</th>
           </tr>
         </thead>
         <tbody>
@@ -311,23 +509,23 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                                   </span>
                                 );
                               })()}
-                                {(() => {
-                                  const rule = matchTaskRule(task, state.schedulerConfig.rules || []);
-                                  if (!rule) return null;
-                                  return (
-                                    <span
-                                      class="badge badge-xs font-semibold shrink-0 text-white"
-                                      style={{ "background-color": rule.badgeColor || "#3b82f6" }}
-                                      title={`来源规则: ${rule.name}`}
-                                    >
-                                      {rule.name}
-                                    </span>
-                                  );
-                                })()}
-                                <span class="truncate max-w-sm block text-sm font-medium text-base-content/90">
-                                  {task.files[0]?.path?.split("/").pop() ||
-                                    t("task-status.unknown")()}
-                                </span>
+                              {(() => {
+                                const rule = matchTaskRule(task, state.schedulerConfig.rules || []);
+                                if (!rule) return null;
+                                return (
+                                  <span
+                                    class="badge badge-xs font-semibold shrink-0 text-white"
+                                    style={{ "background-color": rule.badgeColor || "#3b82f6" }}
+                                    title={`来源规则: ${rule.name}`}
+                                  >
+                                    {rule.name}
+                                  </span>
+                                );
+                              })()}
+                              <span class="truncate max-w-sm block text-sm font-medium text-base-content/90">
+                                {task.files[0]?.path?.split("/").pop() ||
+                                  t("task-status.unknown")()}
+                              </span>
                             </div>
                           </td>
                           <td class="p-2 text-sm text-base-content/70">
@@ -387,7 +585,7 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                             </div>
                           </td>
                           <td class="p-2 text-left text-xs max-w-[200px] truncate">
-                            {/* Keep blank for child task directory column to avoid duplication */}
+                            {/* Keep blank for child task directory column */}
                           </td>
                         </tr>
                       )}
@@ -404,4 +602,3 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
 };
 
 export default TaskListTable;
-
