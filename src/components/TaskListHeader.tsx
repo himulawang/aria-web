@@ -341,6 +341,7 @@ const TaskListHeader: Component<TaskListHeaderProps> = (props) => {
         </div>
         <div class="flex items-center gap-1.5">
           <input
+            id="task-search-input"
             type="text"
             placeholder={t("task-list.search")()}
             class="input input-sm input-bordered max-w-xs"

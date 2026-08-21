@@ -5,7 +5,9 @@ export type KeyboardAction =
   | "REFRESH_TASKS" 
   | "SELECT_ALL" 
   | "FIND" 
-  | "DELETE_TASK";
+  | "DELETE_TASK"
+  | "TOGGLE_PAUSE_RESUME"
+  | "ESCAPE";
 
 export const keyboardShortcuts: Record<string, KeyboardAction> = {
   "ctrl+n": "ADD_TASK",
@@ -14,7 +16,11 @@ export const keyboardShortcuts: Record<string, KeyboardAction> = {
   "ctrl+r": "REFRESH_TASKS",
   "ctrl+a": "SELECT_ALL",
   "ctrl+f": "FIND",
+  "/": "FIND",
   "delete": "DELETE_TASK",
+  "backspace": "DELETE_TASK",
+  " ": "TOGGLE_PAUSE_RESUME",
+  "escape": "ESCAPE",
 };
 
 class KeyboardService {
@@ -28,9 +34,12 @@ class KeyboardService {
     this.isMac = /(Mac|iPhone|iPod|iPad)/i.test(platform);
 
     window.addEventListener("keydown", (event) => {
-      // Ignore ALL global shortcuts when user is typing in an input, textarea, or contenteditable
+      // Ignore global shortcuts when user is typing in an input, textarea, or contenteditable
       const target = event.target as HTMLElement;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) {
+        if (event.key === "Escape") {
+          target.blur();
+        }
         return;
       }
 
@@ -45,9 +54,9 @@ class KeyboardService {
       if (shiftPressed) shortcut += "shift+";
       
       if (shortcut === "") {
-          shortcut = key;
+        shortcut = key;
       } else {
-          shortcut += key;
+        shortcut += key;
       }
 
       const action = keyboardShortcuts[shortcut];
@@ -55,15 +64,12 @@ class KeyboardService {
         event.preventDefault();
         this.handleAction(action);
       }
-    }, true); // Use capture phase to intercept events early
+    }, true);
 
     this.isInitialized = true;
-    console.log(`[KeyboardService] Initialized global keyboard shortcuts (Mac: ${this.isMac}).`);
   }
 
   private handleAction(action: KeyboardAction) {
-    console.log(`[KeyboardService] Triggering action: ${action}`);
-    
     switch (action) {
       case "ADD_TASK":
         window.dispatchEvent(new CustomEvent("aria-web:add-task"));
@@ -85,6 +91,12 @@ class KeyboardService {
         break;
       case "DELETE_TASK":
         window.dispatchEvent(new CustomEvent("aria-web:delete-task"));
+        break;
+      case "TOGGLE_PAUSE_RESUME":
+        window.dispatchEvent(new CustomEvent("aria-web:toggle-pause-resume"));
+        break;
+      case "ESCAPE":
+        window.dispatchEvent(new CustomEvent("aria-web:escape"));
         break;
     }
   }

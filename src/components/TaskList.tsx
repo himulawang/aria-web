@@ -92,11 +92,59 @@ const TaskList: Component<TaskListProps> = (props) => {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === "Shift") setIsShiftPressed(false);
     };
+
+    const handleSelectAll = () => {
+      const all = new Set<string>(filteredTasks().map((t) => t.gid));
+      setSelectedTasks(all);
+    };
+
+    const handleFind = () => {
+      const el = document.getElementById("task-search-input") as HTMLInputElement;
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    };
+
+    const handleDeleteTask = () => {
+      const gids = Array.from(selectedTasks());
+      if (gids.length > 0) {
+        setDeleteConfirmTasks(gids);
+      }
+    };
+
+    const handleTogglePauseResume = async () => {
+      const gids = Array.from(selectedTasks());
+      if (gids.length === 0) return;
+      const tasks = state.tasks.filter((t) => gids.includes(t.gid));
+      const hasActive = tasks.some((t) => t.status === "active" || t.status === "waiting");
+      if (hasActive) {
+        await aria2Store.pauseTasks(gids);
+      } else {
+        await aria2Store.resumeTasks(gids);
+      }
+    };
+
+    const handleEscape = () => {
+      setSelectedTasks(new Set<string>());
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("aria-web:select-all", handleSelectAll);
+    window.addEventListener("aria-web:find", handleFind);
+    window.addEventListener("aria-web:delete-task", handleDeleteTask);
+    window.addEventListener("aria-web:toggle-pause-resume", handleTogglePauseResume);
+    window.addEventListener("aria-web:escape", handleEscape);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("aria-web:select-all", handleSelectAll);
+      window.removeEventListener("aria-web:find", handleFind);
+      window.removeEventListener("aria-web:delete-task", handleDeleteTask);
+      window.removeEventListener("aria-web:toggle-pause-resume", handleTogglePauseResume);
+      window.removeEventListener("aria-web:escape", handleEscape);
     };
   });
 
