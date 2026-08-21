@@ -20,6 +20,17 @@ const TaskList: Component<TaskListProps> = (props) => {
   const [selectedTasks, setSelectedTasks] = createSignal<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = createSignal(false);
   const [searchQuery, setSearchQuery] = createSignal("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = createSignal("");
+  let searchDebounceTimer: any = null;
+
+  createEffect(() => {
+    const q = searchQuery();
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      setDebouncedSearchQuery(q);
+    }, 150);
+  });
+
   const [sortKey, setSortKey] = createSignal<string | null>(null);
   const [sortDirection, setSortDirection] = createSignal<"asc" | "desc">("asc");
   const [isShiftPressed, setIsShiftPressed] = createSignal(false);
@@ -151,7 +162,7 @@ const TaskList: Component<TaskListProps> = (props) => {
       result = tasks;
     }
 
-    const query = searchQuery().trim();
+    const query = debouncedSearchQuery().trim();
     if (query) {
       let isMatch: (val: string) => boolean;
 

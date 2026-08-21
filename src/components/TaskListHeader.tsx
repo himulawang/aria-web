@@ -18,6 +18,7 @@ import {
   HiOutlineQuestionMarkCircle,
   HiOutlineBolt,
   HiOutlineSparkles,
+  HiOutlineArrowPath,
   HiOutlineArrowPathRoundedSquare,
 } from "solid-icons/hi";
 import { FaSolidBroom } from "solid-icons/fa";
@@ -290,6 +291,19 @@ const TaskListHeader: Component<TaskListHeaderProps> = (props) => {
               title={props.isShiftPressed ? "Force Delete Selected (Shift-click)" : t("common.delete")()}
             >
               <HiOutlineTrash class="w-5 h-5" />
+            </button>
+          </Show>
+
+          {/* Retry all failed tasks button */}
+          <Show when={state.tasks.some((t) => t.status === "error")}>
+            <button
+              onClick={async () => {
+                await aria2Store.retryAllErrorTasks();
+              }}
+              class="btn btn-sm btn-ghost btn-square text-warning"
+              title={t("task-list.retry-all-failed")() || "一键重试所有失败任务 (Retry all failed tasks)"}
+            >
+              <HiOutlineArrowPath class="w-5 h-5" />
             </button>
           </Show>
 

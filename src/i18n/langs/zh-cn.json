@@ -201,6 +201,7 @@
   "task-list.arrange-by-dir-natural": "按目录与自然序号重排全局队列",
   "task-list.queue-rank": "排队",
   "task-list.queue-active": "下载中",
+  "task-list.retry-all-failed": "一键重试所有失败任务",
   "new-task.natural-sort": "智能按自然序号排序入队",
   "task-status.active": "活跃",
   "task-status.complete": "已完成",

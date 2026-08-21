@@ -667,6 +667,75 @@ export const aria2Store = {
     }
   },
 
+  async retryTask(gid: string): Promise<string | null> {
+    if (!client) await this.connect();
+    try {
+      const task = await client!.request<any>("aria2.tellStatus", [gid]);
+      let options: Record<string, any> = {};
+      try {
+        options = (await client!.request<Record<string, any>>("aria2.getOption", [gid])) || {};
+      } catch {}
+
+      delete options["select-file"];
+      delete options["checksum"];
+      delete options["index-out"];
+
+      const uris: string[] = [];
+      if (task.files && Array.isArray(task.files)) {
+        for (const file of task.files) {
+          if (file.uris && Array.isArray(file.uris)) {
+            for (const u of file.uris) {
+              if (u && u.uri && !uris.includes(u.uri)) {
+                uris.push(u.uri);
+              }
+            }
+          }
+        }
+      }
+
+      if (uris.length === 0) {
+        throw new Error("No download URIs found for this task");
+      }
+
+      const newGid = await client!.request<string>("aria2.addUri", [uris, options]);
+
+      try {
+        await client!.request("aria2.removeDownloadResult", [gid]);
+      } catch {}
+
+      await this.fetchTasks();
+      return newGid;
+    } catch (e) {
+      logger.error(`Failed to retry task ${gid}: ${e}`, LOG_CONTEXT);
+      throw e;
+    }
+  },
+
+  async retryTasks(gids: string[]): Promise<number> {
+    let successCount = 0;
+    for (const gid of gids) {
+      try {
+        await this.retryTask(gid);
+        successCount++;
+      } catch (err) {
+        logger.warn(`Failed to retry task ${gid}: ${err}`, LOG_CONTEXT);
+      }
+    }
+    if (successCount > 0) {
+      notificationStore.add(`Successfully restarted ${successCount} failed tasks`, "success");
+    }
+    return successCount;
+  },
+
+  async retryAllErrorTasks(): Promise<number> {
+    const errorGids = state.tasks.filter((t) => t.status === "error").map((t) => t.gid);
+    if (errorGids.length === 0) {
+      notificationStore.add("No failed tasks to retry", "info");
+      return 0;
+    }
+    return this.retryTasks(errorGids);
+  },
+
   async getTaskOption(gid: string, name: string) {
     if (!client) await this.connect();
     try {

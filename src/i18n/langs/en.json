@@ -192,6 +192,7 @@
   "task-list.arrange-by-dir-natural": "Arrange Queue by Directory & Natural Order",
   "task-list.queue-rank": "Queue",
   "task-list.queue-active": "Active",
+  "task-list.retry-all-failed": "Retry All Failed Tasks",
   "new-task.natural-sort": "Natural sort links by filename",
   "task-status.active": "Active",
   "task-status.complete": "Completed",
