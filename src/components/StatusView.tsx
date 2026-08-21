@@ -1,6 +1,7 @@
 import { type Component, createResource, Show, For } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
+import { SpeedChart } from "./SpeedChart";
 
 const StatusView: Component = () => {
   const state = aria2Store.getState();
@@ -34,6 +35,9 @@ const StatusView: Component = () => {
       <div class="flex items-center justify-between">
         <h2 class="text-2xl font-bold">Aria2 Status</h2>
       </div>
+
+      {/* Real-time Bandwidth Speed Chart */}
+      <SpeedChart />
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="stat bg-base-100 shadow-sm border border-base-300">
