@@ -1,5 +1,11 @@
 {
   "app.settings.browserNotification": "Enable Browser Notifications",
+  "app.settings.btTrackersTitle": "BitTorrent Trackers Auto-Sync",
+  "app.settings.btTrackersDesc": "One-click sync from public tracker lists to Aria2 bt-tracker configuration, significantly improving peer discovery and download speed.",
+  "app.settings.syncTrackers": "Sync Trackers",
+  "app.settings.syncTrackersNow": "Sync Trackers Now",
+  "app.settings.syncTrackersTooltip": "One-click sync latest quality BT trackers from public sources",
+  "app.settings.syncing": "Syncing...",
   "app.settings.dark": "Dark",
   "app.settings.dragAndDropTasks": "Drag and Drop Tasks",
   "app.settings.export": "Export Settings",

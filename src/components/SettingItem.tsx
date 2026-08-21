@@ -1,5 +1,8 @@
-import { type Component, Show, For } from "solid-js";
+import { type Component, Show, For, createSignal } from "solid-js";
 import { aria2Store } from "../store";
+import { trackerService } from "../utils/tracker-service";
+import { t } from "../i18n";
+import { HiOutlineArrowPath } from "solid-icons/hi";
 
 interface SettingItemProps {
   optName: string;
@@ -9,6 +12,8 @@ interface SettingItemProps {
 }
 
 const SettingItem: Component<SettingItemProps> = (props) => {
+  const [isSyncing, setIsSyncing] = createSignal(false);
+
   const handleUpdate = async (newValue: any) => {
     try {
       if (props.onUpdate) {
@@ -17,9 +22,16 @@ const SettingItem: Component<SettingItemProps> = (props) => {
         await aria2Store.changeGlobalOption(props.optName, newValue);
       }
     } catch (e) {
-      // If there's no onUpdate, we might want a fallback notification here, 
-      // but usually the parent should handle it.
       throw e;
+    }
+  };
+
+  const handleSyncTrackers = async () => {
+    setIsSyncing(true);
+    try {
+      await trackerService.syncTrackersToAria2();
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -40,7 +52,7 @@ const SettingItem: Component<SettingItemProps> = (props) => {
           </div>
         </Show>
       </div>
-      <div class="flex items-center">
+      <div class="flex items-center gap-2">
         {(() => {
           switch (props.opt.type) {
             case "boolean":
@@ -79,13 +91,26 @@ const SettingItem: Component<SettingItemProps> = (props) => {
               );
             default:
               return (
-                <input
-                  type="text"
-                  class="input input-bordered input-sm w-32"
-                  value={String(props.value() ?? "")}
-                  disabled={props.opt.readonly}
-                  onInput={(e) => handleUpdate(e.currentTarget.value)}
-                />
+                <div class="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    class="input input-bordered input-sm w-44 md:w-64 font-mono text-xs"
+                    value={String(props.value() ?? "")}
+                    disabled={props.opt.readonly}
+                    onInput={(e) => handleUpdate(e.currentTarget.value)}
+                  />
+                  <Show when={props.optName === "bt-tracker"}>
+                    <button
+                      class="btn btn-sm btn-outline btn-primary gap-1"
+                      onClick={handleSyncTrackers}
+                      disabled={isSyncing()}
+                      title={t("app.settings.syncTrackersTooltip")() || "一键从公共源同步最新优质 BT Tracker 列表"}
+                    >
+                      <HiOutlineArrowPath class={`w-4 h-4 ${isSyncing() ? "animate-spin" : ""}`} />
+                      <span class="text-xs">{t("app.settings.syncTrackers")() || "同步 Trackers"}</span>
+                    </button>
+                  </Show>
+                </div>
               );
           }
         })()}

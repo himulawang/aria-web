@@ -2,10 +2,23 @@ import { SUPPORTED_LANGUAGES } from "../i18n/languages";
 import { type Component, createSignal, For } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
+import { trackerService, TRACKER_SOURCES } from "../utils/tracker-service";
+import { HiOutlineArrowPath } from "solid-icons/hi";
 
 const AppSettingsView: Component = () => {
   const state = aria2Store.getState();
   const [importText, setImportText] = createSignal("");
+  const [selectedTrackerSource, setSelectedTrackerSource] = createSignal(TRACKER_SOURCES[0].url);
+  const [isSyncingTrackers, setIsSyncingTrackers] = createSignal(false);
+
+  const handleSyncTrackers = async () => {
+    setIsSyncingTrackers(true);
+    try {
+      await trackerService.syncTrackersToAria2(selectedTrackerSource());
+    } finally {
+      setIsSyncingTrackers(false);
+    }
+  };
 
   const updateSetting = async (key: string, value: any) => {
     await aria2Store.updateAppSettings({ [key]: value });
@@ -231,6 +244,43 @@ const AppSettingsView: Component = () => {
             </div>
           </div>
 
+          {/* BT Tracker Sync Section */}
+          <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body">
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <h3 class="card-title text-lg">
+                    {t("app.settings.btTrackersTitle")() || "BitTorrent Trackers 自动同步"}
+                  </h3>
+                  <p class="text-xs text-base-content/70 mt-1">
+                    {t("app.settings.btTrackersDesc")() || "一键从公共优质源更新 aria2 的 bt-tracker 配置，显著提升 BT 磁力任务连接性与下载速度。"}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row items-center gap-3 mt-3">
+                <select
+                  class="select select-bordered select-sm w-full sm:flex-1"
+                  value={selectedTrackerSource()}
+                  onChange={(e) => setSelectedTrackerSource(e.currentTarget.value)}
+                >
+                  <For each={TRACKER_SOURCES}>
+                    {(s) => <option value={s.url}>{s.name}</option>}
+                  </For>
+                </select>
+
+                <button
+                  class="btn btn-sm btn-primary w-full sm:w-auto gap-1.5 shrink-0"
+                  onClick={handleSyncTrackers}
+                  disabled={isSyncingTrackers()}
+                >
+                  <HiOutlineArrowPath class={`w-4 h-4 ${isSyncingTrackers() ? "animate-spin" : ""}`} />
+                  <span>{isSyncingTrackers() ? (t("app.settings.syncing")() || "同步中...") : (t("app.settings.syncTrackersNow")() || "立即同步 Trackers")}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Import/Export Section */}
           <div class="card bg-base-100 shadow-sm border border-base-300">
             <div class="card-body">
@@ -251,7 +301,6 @@ const AppSettingsView: Component = () => {
                   </button>
                 </div>
                 <button class="btn btn-outline" onClick={handleExport}>
-                  {t("app.settings.export")()}
                   {t("app.settings.export")()}
                 </button>
               </div>

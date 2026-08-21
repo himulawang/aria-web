@@ -1,5 +1,11 @@
 {
   "app.settings.browserNotification": "启用浏览器通知",
+  "app.settings.btTrackersTitle": "BitTorrent Trackers 自动同步",
+  "app.settings.btTrackersDesc": "一键从公共优质源更新 aria2 的 bt-tracker 配置，显著提升 BT 磁力任务连接性与下载速度。",
+  "app.settings.syncTrackers": "同步 Trackers",
+  "app.settings.syncTrackersNow": "立即同步 Trackers",
+  "app.settings.syncTrackersTooltip": "一键从公共源同步最新优质 BT Tracker 列表",
+  "app.settings.syncing": "同步中...",
   "app.settings.dark": "深色",
   "app.settings.dragAndDropTasks": "拖拽添加任务",
   "app.settings.export": "导出设置",
