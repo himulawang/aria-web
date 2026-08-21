@@ -1,4 +1,5 @@
 import { SUPPORTED_LANGUAGES } from "../i18n/languages";
+import { AVAILABLE_THEMES } from "../config/themes";
 import { type Component, createSignal, For } from "solid-js";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
@@ -91,11 +92,13 @@ const AppSettingsView: Component = () => {
                         updateSetting("theme", e.currentTarget.value)
                       }
                     >
-                      <option value="light">{t("app.settings.light")()}</option>
-                      <option value="dark">{t("app.settings.dark")()}</option>
-                      <option value="system">
-                        {t("app.settings.system")()}
-                      </option>
+                      <For each={AVAILABLE_THEMES}>
+                        {(theme) => (
+                          <option value={theme.id}>
+                            {theme.name}
+                          </option>
+                        )}
+                      </For>
                     </select>
                   </div>
                 </div>

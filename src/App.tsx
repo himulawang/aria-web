@@ -152,13 +152,24 @@ const App: Component = () => {
 
   createEffect(() => {
     const theme = aria2Store.getState().appSettings.theme;
-    let activeTheme = theme;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const applyTheme = () => {
+      let activeTheme = theme;
+      if (theme === "system") {
+        activeTheme = mediaQuery.matches ? "dark" : "light";
+      }
+      document.documentElement.setAttribute("data-theme", activeTheme);
+    };
+
+    applyTheme();
+
     if (theme === "system") {
-      activeTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+      mediaQuery.addEventListener("change", applyTheme);
+      onCleanup(() => {
+        mediaQuery.removeEventListener("change", applyTheme);
+      });
     }
-    document.documentElement.setAttribute("data-theme", activeTheme);
   });
 
   // Dynamic document title update
