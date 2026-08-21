@@ -8,7 +8,9 @@ export const titleService = {
     const appName = "aria-web";
 
     if (!stat) {
-      document.title = appName;
+      if (document.title !== appName) {
+        document.title = appName;
+      }
       return;
     }
 
@@ -16,6 +18,9 @@ export const titleService = {
     const upSpeed = formatSpeed(Number(stat.uploadSpeed || 0));
     
     // Matching AriaNg behavior: (D: 1.2 MB/s, U: 50 KB/s) - aria-web
-    document.title = `(D: ${downSpeed}, U: ${upSpeed}) - ${appName}`;
+    const newTitle = `(D: ${downSpeed}, U: ${upSpeed}) - ${appName}`;
+    if (document.title !== newTitle) {
+      document.title = newTitle;
+    }
   }
 };

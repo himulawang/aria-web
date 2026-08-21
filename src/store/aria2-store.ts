@@ -1,3 +1,4 @@
+import { batch } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { Aria2Client } from "../core/aria2-client";
 import type { Aria2Config } from "../core/types";
@@ -8,6 +9,15 @@ import { notificationStore } from "./notification-store";
 import { DEFAULT_APP_SETTINGS } from "../config/app-settings";
 import type { AppSettings } from "../config/app-settings";
 import { naturalCompare, getTaskFileName } from "../utils/natural-sort";
+import {
+  DEFAULT_SCHEDULER_CONFIG,
+  DEFAULT_SCHEDULER_RULES,
+  type SmartSchedulerConfig,
+} from "../config/scheduler-config";
+import {
+  runSmartBalanceScheduler,
+  interleaveWaitingTasks,
+} from "../utils/scheduler-engine";
 
 interface GlobalStat {
   activeDownloads: number;
@@ -36,6 +46,7 @@ interface Aria2State {
   globalStat: GlobalStat | null;
   isDownloading: boolean;
   appSettings: AppSettings;
+  schedulerConfig: SmartSchedulerConfig;
   initialFetchDone: boolean;
 }
 
@@ -57,6 +68,7 @@ const [state, setState] = createStore<Aria2State>({
   globalStat: null,
   isDownloading: false,
   appSettings: DEFAULT_APP_SETTINGS,
+  schedulerConfig: DEFAULT_SCHEDULER_CONFIG,
   initialFetchDone: false,
 });
 
@@ -66,8 +78,30 @@ let pollingTimer: any = null;
 const hiddenGids = new Set<string>();
 // Guard to prevent duplicate event listener registration
 let listenersSetup = false;
+let lastBalanceTimestamp = 0;
+let isBalancing = false;
+let cachedMaxConcurrent = 5;
 
 const LOG_CONTEXT = "aria2Store";
+
+// Keys needed for task list representation (excluding large bitfield / pieceHash dumps)
+const TASK_LIST_KEYS = [
+  "gid",
+  "status",
+  "totalLength",
+  "completedLength",
+  "uploadLength",
+  "downloadSpeed",
+  "uploadSpeed",
+  "dir",
+  "files",
+  "bittorrent",
+  "errorCode",
+  "errorMessage",
+  "connections",
+  "numPieces",
+  "pieceLength",
+];
 
 export const aria2Store = {
   getState: () => state,
@@ -79,6 +113,12 @@ export const aria2Store = {
     const savedSettings = await storageDB.get<AppSettings>("app_settings");
     if (savedSettings) {
       setState("appSettings", savedSettings);
+    }
+
+    // Load Scheduler Config
+    const savedSchedulerConfig = await storageDB.get<SmartSchedulerConfig>("smart_scheduler_config");
+    if (savedSchedulerConfig) {
+      setState("schedulerConfig", savedSchedulerConfig);
     }
 
     // Load RPC Profiles
@@ -181,6 +221,7 @@ export const aria2Store = {
   async exportSettings() {
     const exportData = {
       appSettings: state.appSettings,
+      schedulerConfig: state.schedulerConfig,
       rpcProfiles: state.rpcProfiles,
       currentProfileId: state.currentProfileId,
     };
@@ -192,6 +233,9 @@ export const aria2Store = {
       const data = JSON.parse(json);
       if (data.appSettings) {
         await this.updateAppSettings(data.appSettings);
+      }
+      if (data.schedulerConfig) {
+        await this.updateSchedulerConfig(data.schedulerConfig);
       }
       if (data.rpcProfiles) {
         setState("rpcProfiles", data.rpcProfiles);
@@ -274,7 +318,7 @@ export const aria2Store = {
   async fetchActiveTasks() {
     if (!client) await this.connect();
     try {
-      const active = await client!.request<any[]>("aria2.tellActive", []);
+      const active = await client!.request<any[]>("aria2.tellActive", [TASK_LIST_KEYS]);
       logger.debug("Fetched active tasks", LOG_CONTEXT);
       setState("tasks", (prev) => {
         const activeGids = new Set(active.map((t) => t.gid));
@@ -289,7 +333,7 @@ export const aria2Store = {
     if (!client) await this.connect();
     try {
       const [active, stat] = await Promise.all([
-        client!.request<any[]>("aria2.tellActive", []),
+        client!.request<any[]>("aria2.tellActive", [TASK_LIST_KEYS]),
         client!.request<GlobalStat>("aria2.getGlobalStat"),
       ]);
 
@@ -319,13 +363,15 @@ export const aria2Store = {
         return;
       }
 
-      activeTasks.forEach((incoming) => {
-        const index = state.tasks.findIndex((t) => t.gid === incoming.gid);
-        if (index !== -1) {
-          setState("tasks", index, reconcile(incoming));
-        } else {
-          setState("tasks", (prev) => [incoming, ...prev]);
-        }
+      batch(() => {
+        activeTasks.forEach((incoming) => {
+          const index = state.tasks.findIndex((t) => t.gid === incoming.gid);
+          if (index !== -1) {
+            setState("tasks", index, reconcile(incoming));
+          } else {
+            setState("tasks", (prev) => [incoming, ...prev]);
+          }
+        });
       });
     } catch (e) {
       logger.error(`Failed to update active tasks: ${e}`, LOG_CONTEXT);
@@ -337,9 +383,9 @@ export const aria2Store = {
     if (!client) await this.connect();
     try {
       const [active, waiting, stopped] = await Promise.all([
-        client!.request<any[]>("aria2.tellActive", []),
-        client!.request<any[]>("aria2.tellWaiting", [0, 1000]),
-        client!.request<any[]>("aria2.tellStopped", [0, 1000]),
+        client!.request<any[]>("aria2.tellActive", [TASK_LIST_KEYS]),
+        client!.request<any[]>("aria2.tellWaiting", [0, 1000, TASK_LIST_KEYS]),
+        client!.request<any[]>("aria2.tellStopped", [0, 1000, TASK_LIST_KEYS]),
       ]);
 
       const allTasks = [...active, ...waiting, ...stopped].filter(
@@ -1034,6 +1080,59 @@ export const aria2Store = {
     }
   },
 
+  async updateSchedulerConfig(newConfig: Partial<SmartSchedulerConfig>) {
+    const updated = { ...state.schedulerConfig, ...newConfig };
+    setState("schedulerConfig", updated);
+    await storageDB.set("smart_scheduler_config", updated);
+  },
+
+  async resetSchedulerRules() {
+    const updated: SmartSchedulerConfig = {
+      ...state.schedulerConfig,
+      rules: [...DEFAULT_SCHEDULER_RULES],
+    };
+    setState("schedulerConfig", updated);
+    await storageDB.set("smart_scheduler_config", updated);
+  },
+
+  async manualInterleaveQueue() {
+    const waitingTasks = state.tasks.filter((t) => t.status === "waiting" || t.status === "paused");
+    if (waitingTasks.length <= 1) return;
+    const interleaved = interleaveWaitingTasks(waitingTasks, state.schedulerConfig.rules);
+    const targetGids = interleaved.map((t) => t.gid);
+    await this.reorderGlobalQueue(targetGids);
+  },
+
+  async triggerSmartBalance() {
+    if (!client) await this.connect();
+    try {
+      isBalancing = true;
+      const opt = await client!.request<Record<string, string>>("aria2.getGlobalOption", []);
+      if (opt?.["max-concurrent-downloads"]) {
+        cachedMaxConcurrent = parseInt(opt["max-concurrent-downloads"], 10) || 5;
+      }
+      const res = await runSmartBalanceScheduler(
+        client!,
+        state.tasks,
+        state.schedulerConfig,
+        cachedMaxConcurrent,
+      );
+      if (res.balanced) {
+        lastBalanceTimestamp = Date.now();
+        await this.fetchTasks();
+        notificationStore.add("Concurrency rebalanced successfully", "success");
+      } else {
+        notificationStore.add(res.reason || "Already balanced", "info");
+      }
+      return res;
+    } catch (e: any) {
+      notificationStore.add(`Balance failed: ${e?.message || e}`, "error");
+      throw e;
+    } finally {
+      isBalancing = false;
+    }
+  },
+
   setSelectedTask(gid: string | null) {
     setState("selectedTaskId", gid);
     if (!gid) {
@@ -1112,6 +1211,41 @@ export const aria2Store = {
               LOG_CONTEXT,
             );
           }
+
+          // Run Smart Concurrency Scheduler if enabled and cooldown met
+          if (
+            state.schedulerConfig.enabled &&
+            client &&
+            !isBalancing &&
+            Date.now() - lastBalanceTimestamp >= state.schedulerConfig.cooldownSeconds * 1000
+          ) {
+            isBalancing = true;
+            try {
+              if (pollTicks % 10 === 0) {
+                const opt = await client.request<Record<string, string>>("aria2.getGlobalOption", []);
+                if (opt?.["max-concurrent-downloads"]) {
+                  cachedMaxConcurrent = parseInt(opt["max-concurrent-downloads"], 10) || 5;
+                }
+              }
+
+              const res = await runSmartBalanceScheduler(
+                client,
+                state.tasks,
+                state.schedulerConfig,
+                cachedMaxConcurrent,
+              );
+
+              if (res.balanced) {
+                lastBalanceTimestamp = Date.now();
+                logger.info("Smart scheduler rebalance executed successfully", LOG_CONTEXT);
+                await this.fetchTasks();
+              }
+            } catch (schErr) {
+              logger.warn(`Scheduler cycle error: ${schErr}`, LOG_CONTEXT);
+            } finally {
+              isBalancing = false;
+            }
+          }
         } catch (e) {
           logger.warn(`Polling error: ${e}`, LOG_CONTEXT);
         } finally {
@@ -1120,11 +1254,21 @@ export const aria2Store = {
       }
 
       if (pollingTimer !== null) {
-        pollingTimer = setTimeout(poll, 2000);
+        const isBackground = typeof document !== "undefined" && document.hidden;
+        const hasActiveTasks = state.tasks.some((t) => t.status === "active");
+        let nextDelay = Math.max(1000, (state.appSettings.downloadTaskRefreshInterval || 2) * 1000);
+
+        if (isBackground) {
+          nextDelay = Math.max(nextDelay, 5000); // Back off to 5s when tab is in background
+        } else if (!hasActiveTasks) {
+          nextDelay = Math.max(nextDelay, 3000); // Back off to 3s when idle
+        }
+
+        pollingTimer = setTimeout(poll, nextDelay);
       }
     };
 
-    pollingTimer = setTimeout(poll, 2000);
+    pollingTimer = setTimeout(poll, 1500);
   },
 
   stopPolling() {

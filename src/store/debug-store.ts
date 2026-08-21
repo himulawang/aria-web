@@ -34,6 +34,9 @@ export const debugStore = {
 
   setEnableDebugLog(value: boolean) {
     setState("enableDebugLog", value);
+    if (!value) {
+      this.clearLogs();
+    }
   },
 
   setLogLevelFilter(level: "DEBUG" | "INFO" | "WARN" | "ERROR") {
@@ -57,7 +60,7 @@ export const debugStore = {
       attachment: obj,
     };
 
-    setState("logs", (prev) => [newLog, ...prev].slice(0, 1000));
+    setState("logs", (prev) => [newLog, ...prev].slice(0, 200));
   },
 
   setRpcRequest(method: string, params: string) {

@@ -9,12 +9,13 @@ import TaskList from "./components/TaskList";
 import TaskDetail from "./components/TaskDetail";
 import DebugView from "./components/DebugView";
 import Ed2kSearch from "./components/Ed2kSearch";
+import SmartSchedulerSettings from "./components/SmartSchedulerSettings";
 import { aria2Store } from "./store";
 import { aria2GlobalAvailableOptions } from "./config/aria2-available-options";
 import { keyboardService } from "./utils/keyboard-service";
 
 interface RouteState {
-  view: "downloads" | "settings" | "status" | "app-settings" | "rpc-profiles" | "debug" | "ed2k";
+  view: "downloads" | "settings" | "status" | "app-settings" | "rpc-profiles" | "scheduler" | "debug" | "ed2k";
   subTab?: string | null;
   taskGid?: string | null;
 }
@@ -34,7 +35,7 @@ function parseHash(hash: string): RouteState {
   const primaryView = pathSegments[0];
   const subTab = pathSegments[1] || null;
 
-  const validViews = ["downloads", "settings", "status", "app-settings", "rpc-profiles", "debug", "ed2k"];
+  const validViews = ["downloads", "settings", "status", "app-settings", "rpc-profiles", "scheduler", "debug", "ed2k"];
   if (!validViews.includes(primaryView)) {
     return { view: "downloads", subTab: "active", taskGid };
   }
@@ -61,7 +62,7 @@ const App: Component = () => {
   const initialRoute = parseHash(window.location.hash);
 
   const [view, setView] = createSignal<
-    "downloads" | "settings" | "status" | "app-settings" | "rpc-profiles" | "debug" | "ed2k"
+    "downloads" | "settings" | "status" | "app-settings" | "rpc-profiles" | "scheduler" | "debug" | "ed2k"
   >(initialRoute.view);
 
   const [activeSubTab, setActiveSubTab] = createSignal<string | null>(
@@ -207,6 +208,8 @@ const App: Component = () => {
           <RpcProfileView onProfileSelected={() => setView("downloads")} />
         ) : view() === "app-settings" ? (
           <AppSettingsView />
+        ) : view() === "scheduler" ? (
+          <SmartSchedulerSettings />
         ) : view() === "status" ? (
           <StatusView />
         ) : view() === "ed2k" ? (

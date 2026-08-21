@@ -18,6 +18,7 @@ import {
   HiOutlineQuestionMarkCircle,
   HiOutlineBolt,
   HiOutlineSparkles,
+  HiOutlineArrowPathRoundedSquare,
 } from "solid-icons/hi";
 import { FaSolidBroom } from "solid-icons/fa";
 
@@ -152,6 +153,16 @@ const TaskListHeader: Component<TaskListHeaderProps> = (props) => {
                   title={t("task-list.arrange-by-dir-natural")()}
                 >
                   <HiOutlineQueueList class="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={async () => {
+                    await aria2Store.manualInterleaveQueue();
+                  }}
+                  class="btn btn-sm btn-ghost btn-square text-primary"
+                  title={t("scheduler.interleaveNow")() || "按网盘来源智能交错排队"}
+                >
+                  <HiOutlineArrowPathRoundedSquare class="w-5 h-5" />
                 </button>
               </>
             }

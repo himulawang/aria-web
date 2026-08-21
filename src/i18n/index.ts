@@ -54,6 +54,6 @@ createEffect(() => {
 export const t = (key: string) => {
   return createMemo(() => {
     const map = currentTranslations();
-    return map[key] || key;
+    return map[key] || (en as Record<string, string>)[key] || key;
   });
 };

@@ -1,8 +1,9 @@
-import { type Component, For, Show, createEffect } from "solid-js";
+import { type Component, For, Show, createMemo } from "solid-js";
 import { aria2Store } from "../store";
 import { notificationStore } from "../store/notification-store";
 import { t } from "../i18n";
 import { formatSpeed, formatSize } from "../utils/format";
+import { matchTaskRule } from "../utils/scheduler-engine";
 import {
   HiOutlineChevronDown,
   HiOutlineFolder,
@@ -47,7 +48,7 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
     }
   };
 
-  const queueRankMap = () => {
+  const queueRankMap = createMemo(() => {
     const map = new Map<string, { type: "active" | "waiting"; rank: number }>();
     let activeIndex = 1;
     let waitingIndex = 1;
@@ -60,7 +61,7 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
       }
     }
     return map;
-  };
+  });
 
   return (
     <div class="overflow-auto flex-1 bg-base-100 rounded-box border border-base-300">
@@ -128,10 +129,9 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                         class="checkbox checkbox-sm checkbox-secondary pointer-events-none"
                         checked={allChecked()}
                         ref={(el) => {
-                          createEffect(() => {
-                            const count = group.tasks.filter((t: any) => props.selectedTasks.has(t.gid)).length;
-                            el.indeterminate = count > 0 && count < group.tasks.length;
-                          });
+                          el.indeterminate =
+                            group.tasks.some((t: any) => props.selectedTasks.has(t.gid)) &&
+                            !group.tasks.every((t: any) => props.selectedTasks.has(t.gid));
                         }}
                       />
                     </td>
@@ -311,10 +311,23 @@ const TaskListTable: Component<TaskListTableProps> = (props) => {
                                   </span>
                                 );
                               })()}
-                              <span class="truncate max-w-sm block text-sm font-medium text-base-content/90">
-                                {task.files[0]?.path?.split("/").pop() ||
-                                  t("task-status.unknown")()}
-                              </span>
+                                {(() => {
+                                  const rule = matchTaskRule(task, state.schedulerConfig.rules || []);
+                                  if (!rule) return null;
+                                  return (
+                                    <span
+                                      class="badge badge-xs font-semibold shrink-0 text-white"
+                                      style={{ "background-color": rule.badgeColor || "#3b82f6" }}
+                                      title={`来源规则: ${rule.name}`}
+                                    >
+                                      {rule.name}
+                                    </span>
+                                  );
+                                })()}
+                                <span class="truncate max-w-sm block text-sm font-medium text-base-content/90">
+                                  {task.files[0]?.path?.split("/").pop() ||
+                                    t("task-status.unknown")()}
+                                </span>
                             </div>
                           </td>
                           <td class="p-2 text-sm text-base-content/70">

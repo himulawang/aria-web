@@ -11,6 +11,7 @@ import {
   HiOutlineChartBar,
   HiOutlineBugAnt,
   HiOutlineMagnifyingGlass,
+  HiOutlineSparkles,
 } from "solid-icons/hi";
 
 interface LayoutProps {
@@ -66,6 +67,12 @@ const Layout: Component<LayoutProps> = (props) => {
       view: "rpc-profiles",
       position: "sidebar",
       icon: HiOutlineIdentification,
+    },
+    {
+      label: () => t("nav.scheduler")() || "智能并发调度",
+      view: "scheduler",
+      position: "sidebar",
+      icon: HiOutlineSparkles,
     },
     {
       label: () => t("nav.appSettings")() || "App Settings",

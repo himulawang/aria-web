@@ -1,4 +1,4 @@
-import { createSignal, type Component, Show, createEffect } from "solid-js";
+import { createSignal, type Component, Show, createEffect, createMemo } from "solid-js";
 import { Portal } from "solid-js/web";
 import { aria2Store } from "../store";
 import { t } from "../i18n";
@@ -7,6 +7,7 @@ import AddTask from "./AddTask";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import TaskListHeader from "./TaskListHeader";
 import TaskListTable from "./TaskListTable";
+import SchedulerLiveDistribution from "./SchedulerLiveDistribution";
 import { useDragSelect } from "./useDragSelect";
 
 interface TaskListProps {
@@ -16,7 +17,6 @@ interface TaskListProps {
 
 const TaskList: Component<TaskListProps> = (props) => {
   const state = aria2Store.getState();
-  const groupCache = new Map<string, any>();
   const [selectedTasks, setSelectedTasks] = createSignal<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = createSignal(false);
   const [searchQuery, setSearchQuery] = createSignal("");
@@ -137,7 +137,7 @@ const TaskList: Component<TaskListProps> = (props) => {
     }
   };
 
-  const filteredTasks = () => {
+  const filteredTasks = createMemo(() => {
     const tasks = state.tasks;
     let result = tasks;
 
@@ -247,9 +247,9 @@ const TaskList: Component<TaskListProps> = (props) => {
       });
     }
     return result;
-  };
+  });
 
-  const groupedTasks = () => {
+  const groupedTasks = createMemo(() => {
     const tasks = filteredTasks();
     const map = new Map<string, typeof tasks>();
     for (const task of tasks) {
@@ -281,67 +281,23 @@ const TaskList: Component<TaskListProps> = (props) => {
           : 0;
       }
 
-      const existing = groupCache.get(dir);
-      if (existing) {
-        existing._setTasks(tasks);
-        existing._setTotalSize(totalSize);
-        existing._setCompletedLength(completedLength);
-        existing._setProgressPercent(progressPercent);
-        existing._setTotalSpeed(totalSpeed);
-        existing._setActiveCount(activeCount);
-        existing._setPausedCount(pausedCount);
-        existing._setCompletedCount(completedCount);
-        existing._setErrorCount(errorCount);
-        return existing;
-      }
-
-      const [rTasks, setTasks] = createSignal(tasks);
-      const [rTotalSize, setTotalSize] = createSignal(totalSize);
-      const [rCompletedLength, setCompletedLength] = createSignal(completedLength);
-      const [rProgressPercent, setProgressPercent] = createSignal(progressPercent);
-      const [rTotalSpeed, setTotalSpeed] = createSignal(totalSpeed);
-      const [rActiveCount, setActiveCount] = createSignal(activeCount);
-      const [rPausedCount, setPausedCount] = createSignal(pausedCount);
-      const [rCompletedCount, setCompletedCount] = createSignal(completedCount);
-      const [rErrorCount, setErrorCount] = createSignal(errorCount);
-
-      const newGroup = {
+      return {
         dir,
-        get tasks() { return rTasks(); },
-        get totalSize() { return rTotalSize(); },
-        get completedLength() { return rCompletedLength(); },
-        get progressPercent() { return rProgressPercent(); },
-        get totalSpeed() { return rTotalSpeed(); },
-        get activeCount() { return rActiveCount(); },
-        get pausedCount() { return rPausedCount(); },
-        get completedCount() { return rCompletedCount(); },
-        get errorCount() { return rErrorCount(); },
-
-        _setTasks: setTasks,
-        _setTotalSize: setTotalSize,
-        _setCompletedLength: setCompletedLength,
-        _setProgressPercent: setProgressPercent,
-        _setTotalSpeed: setTotalSpeed,
-        _setActiveCount: setActiveCount,
-        _setPausedCount: setPausedCount,
-        _setCompletedCount: setCompletedCount,
-        _setErrorCount: setErrorCount,
+        tasks,
+        totalSize,
+        completedLength,
+        progressPercent,
+        totalSpeed,
+        activeCount,
+        pausedCount,
+        completedCount,
+        errorCount,
       };
-      groupCache.set(dir, newGroup);
-      return newGroup;
     });
-
-    // Clean up cached directories no longer present
-    const currentDirs = new Set(sortedGroups.map((g) => g.dir));
-    for (const cachedDir of groupCache.keys()) {
-      if (!currentDirs.has(cachedDir)) {
-        groupCache.delete(cachedDir);
-      }
-    }
 
     sortedGroups.sort((a, b) => naturalCompare(a.dir, b.dir));
     return sortedGroups;
-  };
+  });
 
   const toggleExpandCollapseAll = () => {
     const allDirs = new Set<string>(state.tasks.map((t) => t.dir || "Default"));
@@ -425,6 +381,9 @@ const TaskList: Component<TaskListProps> = (props) => {
         toggleExpandCollapseAll={toggleExpandCollapseAll}
         arrangePriorityByDirectory={arrangePriorityByDirectory}
       />
+
+      {/* Real-time Concurrency & Queue Distribution Bar */}
+      <SchedulerLiveDistribution compact={true} showActions={true} />
 
       <TaskListTable
         selectedTasks={selectedTasks()}
