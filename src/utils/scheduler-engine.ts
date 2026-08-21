@@ -11,10 +11,12 @@ const LOG_CONTEXT = "SchedulerEngine";
 export function matchTaskRule(task: any, rules: SchedulerRule[]): SchedulerRule | null {
   if (!task || !rules || rules.length === 0) return null;
 
-  // Extract URLs from files
+  // Extract URLs and file paths from task files
   const uris: string[] = [];
+  const filePaths: string[] = [];
   if (task.files && Array.isArray(task.files)) {
     for (const file of task.files) {
+      if (file.path) filePaths.push(file.path);
       if (file.uris && Array.isArray(file.uris)) {
         for (const u of file.uris) {
           if (u && u.uri) uris.push(u.uri);
@@ -23,7 +25,7 @@ export function matchTaskRule(task: any, rules: SchedulerRule[]): SchedulerRule 
     }
   }
 
-  const dir = (task.dir || "").toLowerCase();
+  const dir = [task.dir || "", ...filePaths].join(" ").toLowerCase();
   const urlCombined = uris.join(" ").toLowerCase();
 
   for (const rule of rules) {
@@ -33,6 +35,7 @@ export function matchTaskRule(task: any, rules: SchedulerRule[]): SchedulerRule 
     if (!pattern) continue;
 
     const testTarget = (target: string): boolean => {
+      if (!target) return false;
       if (rule.matchType === "regex") {
         try {
           const regex = new RegExp(pattern, "i");
@@ -40,6 +43,12 @@ export function matchTaskRule(task: any, rules: SchedulerRule[]): SchedulerRule 
         } catch {
           return false;
         }
+      }
+      // Keyword matching: support comma or pipe separated words
+      const keywords = pattern.split(/[,|]/).map((k) => k.trim().toLowerCase()).filter(Boolean);
+      if (keywords.length > 0) {
+        const targetLower = target.toLowerCase();
+        return keywords.some((k) => targetLower.includes(k));
       }
       return target.toLowerCase().includes(pattern.toLowerCase());
     };
@@ -95,7 +104,7 @@ export function interleaveWaitingTasks(waitingTasks: any[], rules: SchedulerRule
   if (groups.size <= 1) return waitingTasks;
 
   const result: any[] = [];
-  const groupQueues = Array.from(groups.values());
+  const groupQueues = Array.from(groups.values()).map((list) => [...list]);
 
   let hasMore = true;
   while (hasMore) {
@@ -283,7 +292,8 @@ export async function runSmartBalanceScheduler(
     await client.multicall(pauseCalls);
 
     // Step 2: Elevate starved waiting tasks to position 0 (head of waiting queue)
-    for (const t of finalTasksToPromote) {
+    // Reversing ensures that task 0 in finalTasksToPromote ends up at position 0
+    for (const t of [...finalTasksToPromote].reverse()) {
       await client.request("aria2.changePosition", [t.gid, 0, "POS_SET"]);
     }
 

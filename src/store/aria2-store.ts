@@ -901,9 +901,7 @@ export const aria2Store = {
 
   async sortSelectedTasksNaturally(gids: string[]): Promise<void> {
     const selectedSet = new Set(gids);
-    const waitingTasks = state.tasks.filter(
-      (t) => t.status === "waiting" || t.status === "paused",
-    );
+    const waitingTasks = state.tasks.filter((t) => t.status === "waiting");
     const selectedWaitingTasks = waitingTasks.filter((t) => selectedSet.has(t.gid));
     if (selectedWaitingTasks.length <= 1) return;
 
@@ -932,15 +930,13 @@ export const aria2Store = {
   async sortDirectoryTasksNaturally(dir: string): Promise<void> {
     const dirMatches = (t: any) => (t.dir || "Default") === (dir || "Default");
     const dirGids = state.tasks
-      .filter((t) => (t.status === "waiting" || t.status === "paused") && dirMatches(t))
+      .filter((t) => t.status === "waiting" && dirMatches(t))
       .map((t) => t.gid);
     await this.sortSelectedTasksNaturally(dirGids);
   },
 
   async moveDirectoryTasksToTop(dir: string): Promise<void> {
-    const waitingTasks = state.tasks.filter(
-      (t) => t.status === "waiting" || t.status === "paused",
-    );
+    const waitingTasks = state.tasks.filter((t) => t.status === "waiting");
     const dirMatches = (t: any) => (t.dir || "Default") === (dir || "Default");
     const thisDir = waitingTasks.filter(dirMatches);
     const others = waitingTasks.filter((t) => !dirMatches(t));
@@ -950,9 +946,7 @@ export const aria2Store = {
   },
 
   async moveDirectoryTasksToBottom(dir: string): Promise<void> {
-    const waitingTasks = state.tasks.filter(
-      (t) => t.status === "waiting" || t.status === "paused",
-    );
+    const waitingTasks = state.tasks.filter((t) => t.status === "waiting");
     const dirMatches = (t: any) => (t.dir || "Default") === (dir || "Default");
     const thisDir = waitingTasks.filter(dirMatches);
     const others = waitingTasks.filter((t) => !dirMatches(t));
@@ -962,9 +956,7 @@ export const aria2Store = {
   },
 
   async arrangeAllTasksByDirectoryAndNatural(): Promise<void> {
-    const waitingTasks = state.tasks.filter(
-      (t) => t.status === "waiting" || t.status === "paused",
-    );
+    const waitingTasks = state.tasks.filter((t) => t.status === "waiting");
     if (waitingTasks.length <= 1) return;
 
     const map = new Map<string, any[]>();
@@ -1096,7 +1088,7 @@ export const aria2Store = {
   },
 
   async manualInterleaveQueue() {
-    const waitingTasks = state.tasks.filter((t) => t.status === "waiting" || t.status === "paused");
+    const waitingTasks = state.tasks.filter((t) => t.status === "waiting");
     if (waitingTasks.length <= 1) return;
     const interleaved = interleaveWaitingTasks(waitingTasks, state.schedulerConfig.rules);
     const targetGids = interleaved.map((t) => t.gid);
